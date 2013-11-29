@@ -77,7 +77,6 @@
 #include "dev/leds.h"
 #include "dev/spi.h"
 #include "rf212bb.h"
-#include "hal.h"
 #include "net/mac/frame802154.h"
 #include "radio.h"
 #include <dev/watchdog.h>
@@ -965,7 +964,7 @@ uint8_t rf212_generate_random_byte(void)
 	uint8_t i;
 	uint8_t rnd = 0;
 
-	AVR_ENTER_CRITICAL_REGION();
+	HAL_ENTER_CRITICAL_REGION();
 		uint8_t old_trx_state = radio_get_trx_state();
 		uint8_t old_rx_pdt_dis = hal_subregister_read(SR_RX_PDT_DIS);
 		radio_set_trx_state(RX_ON); // Random Number generator works only in basic TRX states
@@ -979,7 +978,7 @@ uint8_t rf212_generate_random_byte(void)
 
 				hal_subregister_write(SR_RX_PDT_DIS, old_rx_pdt_dis);
 				radio_set_trx_state(old_trx_state);
-				AVR_LEAVE_CRITICAL_REGION();
+				HAL_LEAVE_CRITICAL_REGION();
 				return rnd;
 			}
 
@@ -987,7 +986,7 @@ void rf212_generate_key(uint8_t* key)
 {
 	uint8_t i, j;
 
-	AVR_ENTER_CRITICAL_REGION();
+	HAL_ENTER_CRITICAL_REGION();
 		uint8_t old_trx_state = radio_get_trx_state();
 		uint8_t old_rx_pdt_dis = hal_subregister_read(SR_RX_PDT_DIS);
 		radio_set_trx_state(RX_ON); // Random Number generator works only in basic TRX states
@@ -1004,7 +1003,7 @@ void rf212_generate_key(uint8_t* key)
 			}
 			hal_subregister_write(SR_RX_PDT_DIS, old_rx_pdt_dis);
 			radio_set_trx_state(old_trx_state);
-			AVR_LEAVE_CRITICAL_REGION();
+			HAL_LEAVE_CRITICAL_REGION();
 		}
 		/*---------------------------------------------------------------------------*/
 void rf212_key_setup(uint8_t *key)
@@ -1185,7 +1184,7 @@ void rf212_set_promiscuous_mode(uint8_t onoff, uint8_t * mac_address)
 		hal_subregister_write(SR_AACK_DIS_ACK, 1); //disable acknowledgment generation
 				hal_subregister_write(SR_RX_SAFE_MODE, 1);
 				hal_subregister_write(SR_I_AM_COORD, 0);
-				hal_subregister_write(SR_SLOTTED_OPERATON, 0);
+				hal_subregister_write(SR_SLOTTED_OPERATION, 0);
 				//		hal_subregister_write(SR_FVN_MODE, 3); // acknowledge all frames
 				hal_subregister_write(SR_AACK_UPLD_RES_FT, 0); // disable reserved frames
 				hal_subregister_write(SR_AACK_FLTR_RES_FT, 0); //no frame filter
@@ -1301,7 +1300,7 @@ int rf212_init(void)
 	/* 802.15.4 specific defines. These are the default values */
 	hal_subregister_write(SR_RX_SAFE_MODE, 0);
 	hal_subregister_write(SR_I_AM_COORD, 0);
-	hal_subregister_write(SR_SLOTTED_OPERATON, 0);
+	hal_subregister_write(SR_SLOTTED_OPERATION, 0);
 	hal_subregister_write(SR_FVN_MODE, 1); // acknowledge version 1 and version 2
 			hal_subregister_write(SR_AACK_UPLD_RES_FT, 0); // block reserved frames
 			hal_subregister_write(SR_AACK_FLTR_RES_FT, 0); //no frame filter for reserved frames

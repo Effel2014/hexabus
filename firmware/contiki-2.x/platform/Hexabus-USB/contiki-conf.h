@@ -50,8 +50,8 @@
 /* MCU and clock rate */
 #define MCU_MHZ 8
 #define PLATFORM         PLATFORM_AVR
-#define HEXABUS_SOCKET 4
-#define HEXABUS_USB    5
+#define HEXABUS_SOCKET 104
+#define HEXABUS_USB    105
 #define RAVEN_REVISION	 HEXABUS_USB
 #ifndef F_CPU
 #define F_CPU            8000000UL
@@ -196,6 +196,7 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #else
 #define PACKETBUF_CONF_HDR_SIZE    0         //RF230 combined driver/mac handles headers internally
 #endif /*RF230BB */
+#define RF230_CONF_RF212 1
 
 #if UIP_CONF_IPV6
 #define RIMEADDR_CONF_SIZE       8

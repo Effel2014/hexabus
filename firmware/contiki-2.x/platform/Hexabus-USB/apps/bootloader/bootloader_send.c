@@ -45,7 +45,6 @@
 #include "sys/etimer.h" //contiki event timer library
 #include "dev/leds.h"
 #include "radio/rf212bb/rf212bb.h"
-#include "radio/rf212bb/hal.h"
 #include "frame802154.h"
 #include "eeprom_variables.h"
 #include "bootloader_send.h"

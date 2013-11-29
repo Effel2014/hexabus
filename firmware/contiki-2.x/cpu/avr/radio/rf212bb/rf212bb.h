@@ -54,8 +54,9 @@
 /*============================ INCLUDE =======================================*/
 #include <stdint.h>
 #include <stdbool.h>
-#include "at86rf212_registermap.h"
-#include "hal.h"
+#include "contiki-conf.h"
+#include "../rf230bb/at86rf230_registermap.h"
+#include "../rf230bb/hal.h"
 
 /*============================ MACROS ========================================*/
 #define SUPPORTED_PART_NUMBER                   ( 7 )

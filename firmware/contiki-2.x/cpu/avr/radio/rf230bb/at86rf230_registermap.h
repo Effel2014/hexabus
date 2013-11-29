@@ -8,6 +8,8 @@
 
   Additional fixes for AVR contributed by:
 
+	Phoebe Buckheister buckheister@itwm.fraunhofer.de
+	Günter Hildebrandt guenter.hildebrandt@esk.fraunhofer.de
 	Colin O'Flynn coflynn@newae.com
 	Eric Gnoske egnoske@gmail.com
 	Blake Leverett bleverett@gmail.com
@@ -98,6 +100,8 @@
 #define CMD_TX_START             (2)
 /** Constant CMD_FORCE_TRX_OFF for sub-register @ref SR_TRX_CMD */
 #define CMD_FORCE_TRX_OFF        (3)
+/** Constant CMD_FORCE_PLL_ON for sub-register @ref SR_TRX_CMD */
+#define CMD_FORCE_PLL_ON         (4)
 /** Constant CMD_RX_ON for sub-register @ref SR_TRX_CMD */
 #define CMD_RX_ON                (6)
 /** Constant CMD_TRX_OFF for sub-register @ref SR_TRX_CMD */
@@ -143,13 +147,21 @@
 /** Offset for register PHY_TX_PWR */
 #define RG_PHY_TX_PWR                    (0x05)
 /** Access parameters for sub-register TX_AUTO_CRC_ON in register @ref RG_PHY_TX_PWR */
+#if !RF230_CONF_RF212
 #define SR_TX_AUTO_CRC_ON            0x05, 0x80, 7
+#else
+#define SR_TX_AUTO_CRC_ON            0x04, 0x20, 5
+#endif
 #define SR_reserved_05_2             0x05, 0x70, 4
 /** Access parameters for sub-register TX_PWR in register @ref RG_PHY_TX_PWR */
 #define SR_TX_PWR                    0x05, 0x0f, 0
 /** Offset for register PHY_RSSI */
 #define RG_PHY_RSSI                      (0x06)
 #define SR_reserved_06_1             0x06, 0xe0, 5
+#if RF230_CONF_RF212
+/** Access parameters for sub-register RND_VALUE in register @ref RG_PHY_RSSI */
+#define SR_RND_VALUE	             0x06, 0x60, 5
+#endif
 /** Access parameters for sub-register RSSI in register @ref RG_PHY_RSSI */
 #define SR_RSSI                      0x06, 0x1f, 0
 /** Offset for register PHY_ED_LEVEL */
@@ -170,6 +182,12 @@
 #define SR_CCA_CS_THRES              0x09, 0xf0, 4
 /** Access parameters for sub-register CCA_ED_THRES in register @ref RG_CCA_THRES */
 #define SR_CCA_ED_THRES              0x09, 0x0f, 0
+#if RF230_CONF_RF212
+/** Offset for register TRX_CTRL_2 */
+#define RG_TRX_CTRL_2			(0x0C)
+/** Access parameters for sub-register RX_SAFE_MODE in register @ref RG_TRX_CTRL_2 */
+#define SR_RX_SAFE_MODE				0x0C, 0x01, 7
+#endif
 /** Offset for register IRQ_MASK */
 #define RG_IRQ_MASK                      (0x0e)
 /** Access parameters for sub-register IRQ_MASK in register @ref RG_IRQ_MASK */
@@ -241,6 +259,20 @@
 #define SR_XTAL_MODE                 0x12, 0xf0, 4
 /** Access parameters for sub-register XTAL_TRIM in register @ref RG_XOSC_CTRL */
 #define SR_XTAL_TRIM                 0x12, 0x0f, 0
+#if RF230_CONF_RF212
+/** Offset for register CC_CTRL_0 */
+#define RG_CC_CTRL_0                     (0x13)
+/** Offset for register CC_CTRL_1 */
+#define RG_CC_CTRL_1                     (0x14)
+/** Access parameters for sub-register RX_PDT_DIS in register @ref RG_RX_SYN */
+#define SR_RX_PDT_DIS                0x15, 0x80, 7
+/** Subregister for enabling LBT mode */
+#define SR_CSMA_LBT_MODE             0x17, 0x40, 6
+/** Subregister for enabling LBT mode */
+#define SR_AACK_PROM_MODE            0x17, 0x01, 1
+#define SR_AACK_UPLD_RES_FT          0x17, 0x10, 4
+#define SR_AACK_FLTR_RES_FT          0x17, 0x20, 5
+#endif
 /** Offset for register FTN_CTRL */
 #define RG_FTN_CTRL                      (0x18)
 /** Access parameters for sub-register FTN_START in register @ref RG_FTN_CTRL */
@@ -266,8 +298,13 @@
 #define RG_PART_NUM                      (0x1c)
 /** Access parameters for sub-register PART_NUM in register @ref RG_PART_NUM */
 #define SR_PART_NUM                  0x1c, 0xff, 0
+#if !RF230_CONF_RF212
 /** Constant RF230 for sub-register @ref SR_PART_NUM */
 #define RF230                    (2)
+#else
+/** Constant RF212 for sub-register @ref SR_PART_NUM */
+#define RF212                    (7)
+#endif
 /** Offset for register VERSION_NUM */
 #define RG_VERSION_NUM                   (0x1d)
 /** Access parameters for sub-register VERSION_NUM in register @ref RG_VERSION_NUM */
@@ -334,7 +371,7 @@
 #define SR_MAX_FRAME_RETRIES         0x2c, 0xf0, 4
 /** Access parameters for sub-register MAX_CSMA_RETRIES in register @ref RG_XAH_CTRL_0 */
 #define SR_MAX_CSMA_RETRIES          0x2c, 0x0e, 1
-#define SR_reserved_2c_3             0x2c, 0x01, 0
+#define SR_SLOTTED_OPERATION         0x2c, 0x01, 0
 /** Offset for register CSMA_SEED_0 */
 #define RG_CSMA_SEED_0                   (0x2d)
 /** Access parameters for sub-register CSMA_SEED_0 in register @ref RG_CSMA_SEED_0 */
@@ -343,13 +380,32 @@
 #define RG_CSMA_SEED_1                   (0x2e)
 /** Offset for register CSMA_BE */
 #define RG_CSMA_BE                      0x2f
+#if !RF230_CONF_RF212
 /** Access parameters for sub-register MIN_BE in register @ref RG_CSMA_SEED_1 */
 #define SR_MIN_BE                    0x2e, 0xc0, 6
 /** Access parameters for AACK_SET_PD bit in register @ref RG_CSMA_SEED_1 */
 #define SR_AACK_SET_PD               0x2e, 0x20, 5
 //#define SR_reserved_2e_2             0x2e, 0x30, 4
+#else
+/** Subregister AACK_DIS_ACK */
+#define SR_AACK_DIS_ACK                   0x2e, 0x10, 4
+#define SR_FVN_MODE						  0x2e, 0xc0, 6
+#endif
 /** Access parameters for sub-register I_AM_COORD in register @ref RG_CSMA_SEED_1 */
 #define SR_I_AM_COORD                0x2e, 0x08, 3
 /** Access parameters for sub-register CSMA_SEED_1 in register @ref RG_CSMA_SEED_1 */
 #define SR_CSMA_SEED_1               0x2e, 0x07, 0
+
+#if RF230_CONF_RF212
+/** Access parameters for sub-register MIN_BE in register @ref RG_CSMA_SEED_1 */
+#define SR_MAX_BE                    0x2f, 0xf0, 4
+#define SR_MIN_BE                    0x2f, 0x0f, 0
+
+/*AES SRAM Registers */
+#define AES_STATUS                   0x82
+#define AES_CTRL                     0x83
+#define AES_KEY_START                0x84
+#define AES_KEY_END                  0x93
+#define AES_CTRL_MIRROR              0x94
+#endif
 #endif /* PHY230_REGISTERMAP_EXTERNAL_H */

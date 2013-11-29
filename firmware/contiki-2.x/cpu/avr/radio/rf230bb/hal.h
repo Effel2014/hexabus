@@ -3,6 +3,8 @@
  *
  *  Additional fixes for AVR contributed by:
  *
+ *	Phoebe Buckheister buckheister@itwm.fraunhofer.de
+ *	Günter Hildebrandt guenter.hildebrandt@esk.fraunhofer.de
  *	Colin O'Flynn coflynn@newae.com
  *	Eric Gnoske egnoske@gmail.com
  *	Blake Leverett bleverett@gmail.com
@@ -82,6 +84,8 @@
 #define ZIGBIT			4
 #define IRIS			5
 #define ATMEGA128RFA1   6
+#define HEXABUS_SOCKET	104
+#define HEXABUS_USB		105
 
 #if PLATFORM_TYPE == RCB_B
 /* 1281 rcb */
@@ -216,6 +220,45 @@
 #   define USARTVECT  USART1_RX_vect
 //#   define TICKTIMER  3
 //#   define HAS_SPARE_TIMER // Not used
+#elif RAVEN_REVISION == HEXABUS_SOCKET
+
+#   define SSPORT     B
+#   define SSPIN      (0x04)
+#   define SPIPORT    B
+#   define MOSIPIN    (0x05)
+#   define MISOPIN    (0x06)
+#   define SCKPIN     (0x07)
+#   define RSTPORT    D
+#   define RSTPIN     (0x06)
+#   define IRQPORT    D
+#   define IRQPIN     (0x02)
+#   define SLPTRPORT  D
+#   define SLPTRPIN   (0x07)
+
+#elif RAVEN_REVISION == HEXABUS_USB
+
+/* HEXABUS USB AT70USB1287 */
+
+#   define SSPORT     B
+#   define SSPIN      (0x00)
+#   define SPIPORT    B
+#   define SCKPIN     (0x01)
+#   define MOSIPIN    (0x02)
+#   define MISOPIN    (0x03)
+#   define RSTPORT    B
+#   define RSTPIN     (0x05)
+#   define IRQPORT    D
+#   define IRQPIN     (0x00)
+#   define SLPTRPORT  B
+#   define SLPTRPIN   (0x04)
+//#   define TXCWPORT   D //not used
+//#   define TXCWPIN    (0x03) //not used
+//#   define USART      1 // not used
+//#   define USARTVECT  USART1_RX_vect // not used
+//#   define TICKTIMER  3 // not used
+//#   define HAS_CW_MODE // not used
+//#   define HAS_SPARE_TIMER // not used
+
 #else
 
 #error "PLATFORM_TYPE undefined in hal.h"
@@ -412,15 +455,23 @@
 #define RADIO_VECT INT5_vect
 #define HAL_ENABLE_RADIO_INTERRUPT( ) { ( EIMSK |= ( 1 << INT5 ) ) ; EICRB |= 0x0C ; PORTE &= ~(1<<PE5);  DDRE &= ~(1<<DDE5); }
 #define HAL_DISABLE_RADIO_INTERRUPT( ) ( EIMSK &= ~( 1 << INT5 ) )
+#elif RAVEN_REVISION == HEXABUS_SOCKET || RAVEN_REVISION == HEXABUS_USB
+//INT0 is used on the HEXABUS platform
+#define RADIO_VECT INT0_vect
+#define HAL_ENABLE_RADIO_INTERRUPT( ) { ( EIMSK |= ( 1 << INT0 ) ) ; EICRA |= 0x03 ; PORTD &= ~(1<<PD0);  DDRD &= ~(1<<DDD5); }
+#define HAL_DISABLE_RADIO_INTERRUPT( ) ( EIMSK &= ~( 1 << INT0 ) )
+#define HAL_ENABLE_OVERFLOW_INTERRUPT( )
 #else
 #define RADIO_VECT TIMER1_CAPT_vect
 // Raven and Jackdaw
 #define HAL_ENABLE_RADIO_INTERRUPT( ) ( TIMSK1 |= ( 1 << ICIE1 ) )
 #define HAL_DISABLE_RADIO_INTERRUPT( ) ( TIMSK1 &= ~( 1 << ICIE1 ) )
 #endif
-
+// Timer is not needed for the HEXABUS radio-driver
+#if RAVEN_REVISION != HEXABUS_SOCKET && RAVEN_REVISION != HEXABUS_USB
 #define HAL_ENABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 |= ( 1 << TOIE1 ) )
 #define HAL_DISABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 &= ~( 1 << TOIE1 ) )
+#endif
 
 /** This macro will protect the following code from interrupts.*/
 #define HAL_ENTER_CRITICAL_REGION( ) {uint8_t volatile saved_sreg = SREG; cli( )
@@ -464,6 +515,8 @@
  */
 #define HAL_BAT_LOW_MASK       ( 0x80 ) /**< Mask for the BAT_LOW interrupt. */
 #define HAL_TRX_UR_MASK        ( 0x40 ) /**< Mask for the TRX_UR interrupt. */
+#define HAL_AMI_MASK           ( 0x20 ) /**< Mask for the AMI interrupt. */
+#define HAL_CCA_ED_DONE        ( 0x10 ) /**< Mask for the CCA_ED_DONE interrupt. */
 #define HAL_TRX_END_MASK       ( 0x08 ) /**< Mask for the TRX_END interrupt. */
 #define HAL_RX_START_MASK      ( 0x04 ) /**< Mask for the RX_START interrupt. */
 #define HAL_PLL_UNLOCK_MASK    ( 0x02 ) /**< Mask for the PLL_UNLOCK interrupt. */
@@ -483,6 +536,9 @@ typedef struct{
     uint8_t data[ HAL_MAX_FRAME_LENGTH ]; /**< Actual frame data. */
     uint8_t lqi;                          /**< LQI value for received frame. */
     bool crc;                             /**< Flag - did CRC pass for received frame? */
+#if RF230_CONF_RF212
+    uint8_t ed;                           /**< Energy Detection value for received frame. */
+#endif
 } hal_rx_frame_t;
 
 /** RX_START event handler callback type. Is called with timestamp in IEEE 802.15.4 symbols and frame length. See hal_set_rx_start_event_handler(). */

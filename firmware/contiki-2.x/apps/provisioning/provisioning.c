@@ -40,7 +40,6 @@
 #include "sys/clock.h"
 #include "dev/leds.h"
 #include "radio/rf212bb/rf212bb.h"
-#include "radio/rf212bb/hal.h"
 #include "dev/watchdog.h"
 #include "net/netstack.h"
 #include "packetbuf.h"
@@ -284,10 +283,10 @@ int provisioning_slave(void) {
 			PRINTF("%x ", packet->aes_key[i]);
 		}
 		PRINTF("\n");
-		AVR_ENTER_CRITICAL_REGION();
+		HAL_ENTER_CRITICAL_REGION();
 		eeprom_write_word((uint16_t *)EE_PAN_ID, packet->pan_id);
 		eeprom_write_block(packet->aes_key, (void *)EE_ENCRYPTION_KEY, EE_ENCRYPTION_KEY_SIZE);
-		AVR_LEAVE_CRITICAL_REGION();
+		HAL_LEAVE_CRITICAL_REGION();
 		provisioning_done_leds();
 		mac_dst_pan_id = packet->pan_id;
 		mac_src_pan_id = packet->pan_id;

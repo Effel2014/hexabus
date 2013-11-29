@@ -64,8 +64,9 @@
 /*============================ INCLUDE =======================================*/
 #include <stdlib.h>
 
-#include "hal.h"
-#include "at86rf212_registermap.h"
+#include "contiki-conf.h"
+#include "../rf230bb/hal.h"
+#include "../rf230bb/at86rf230_registermap.h"
 /*============================ MACROS ========================================*/
 
 /*
@@ -138,6 +139,9 @@ extern uint8_t promiscuous_mode;
 /*============================ PROTOTYPES ====================================*/
 /*============================ IMPLEMENTATION ================================*/
 
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
 /** \brief  This function initializes the Hardware Abstraction Layer.
  */
 void
@@ -183,7 +187,7 @@ hal_init(void)
 //void
 //hal_reset_flags(void)
 //{
-//    AVR_ENTER_CRITICAL_REGION();
+//    HAL_ENTER_CRITICAL_REGION();
 
     /* Reset Flags. */
 //    hal_bat_low_flag     = 0;
@@ -193,7 +197,7 @@ hal_init(void)
 //    rx_start_callback = NULL;
 //    trx_end_callback  = NULL;
 
-//    AVR_LEAVE_CRITICAL_REGION();
+//    HAL_LEAVE_CRITICAL_REGION();
 //}
 
 /*----------------------------------------------------------------------------*/
@@ -215,9 +219,9 @@ hal_init(void)
 //void
 //hal_clear_bat_low_flag(void)
 //{
-//    AVR_ENTER_CRITICAL_REGION();
+//    HAL_ENTER_CRITICAL_REGION();
 //    hal_bat_low_flag = 0;
-//    AVR_LEAVE_CRITICAL_REGION();
+//    HAL_LEAVE_CRITICAL_REGION();
 //}
 
 /*----------------------------------------------------------------------------*/
@@ -237,9 +241,9 @@ hal_init(void)
 //void
 //hal_set_trx_end_event_handler(hal_trx_end_isr_event_handler_t trx_end_callback_handle)
 //{
-//    AVR_ENTER_CRITICAL_REGION();
+//    HAL_ENTER_CRITICAL_REGION();
 //    trx_end_callback = trx_end_callback_handle;
-//    AVR_LEAVE_CRITICAL_REGION();
+//    HAL_LEAVE_CRITICAL_REGION();
 //}
 
 /*----------------------------------------------------------------------------*/
@@ -248,9 +252,9 @@ hal_init(void)
 //void
 //hal_clear_trx_end_event_handler(void)
 //{
-//    AVR_ENTER_CRITICAL_REGION();
+//    HAL_ENTER_CRITICAL_REGION();
 //    trx_end_callback = NULL;
-//    AVR_LEAVE_CRITICAL_REGION();
+//    HAL_LEAVE_CRITICAL_REGION();
 //}
 
 /*----------------------------------------------------------------------------*/
@@ -271,9 +275,9 @@ hal_init(void)
 //void
 //hal_set_rx_start_event_handler(hal_rx_start_isr_event_handler_t rx_start_callback_handle)
 //{
-//    AVR_ENTER_CRITICAL_REGION();
+//    HAL_ENTER_CRITICAL_REGION();
 //    rx_start_callback = rx_start_callback_handle;
-//    AVR_LEAVE_CRITICAL_REGION();
+//    HAL_LEAVE_CRITICAL_REGION();
 //}
 
 /*----------------------------------------------------------------------------*/
@@ -282,9 +286,9 @@ hal_init(void)
 //void
 //hal_clear_rx_start_event_handler(void)
 //{
-//    AVR_ENTER_CRITICAL_REGION();
+//    HAL_ENTER_CRITICAL_REGION();
 //    rx_start_callback = NULL;
-//    AVR_LEAVE_CRITICAL_REGION();
+//    HAL_LEAVE_CRITICAL_REGION();
 //}
 
 /*----------------------------------------------------------------------------*/
@@ -306,9 +310,9 @@ hal_init(void)
 //void
 //hal_clear_pll_lock_flag(void)
 //{
-//    AVR_ENTER_CRITICAL_REGION();
+//    HAL_ENTER_CRITICAL_REGION();
 //    hal_pll_lock_flag = 0;
-//    AVR_LEAVE_CRITICAL_REGION();
+//    HAL_LEAVE_CRITICAL_REGION();
 //}
 
 /*----------------------------------------------------------------------------*/
@@ -330,7 +334,7 @@ hal_register_read(uint8_t address)
 
     uint8_t register_value = 0;
 
-    AVR_ENTER_CRITICAL_REGION();
+    HAL_ENTER_CRITICAL_REGION();
 
     HAL_SS_LOW(); /* Start the SPI transaction by pulling the Slave Select low. */
 
@@ -345,7 +349,7 @@ hal_register_read(uint8_t address)
 
     HAL_SS_HIGH(); /* End the transaction by pulling the Slave Select High. */
 
-    AVR_LEAVE_CRITICAL_REGION();
+    HAL_LEAVE_CRITICAL_REGION();
 
     return register_value;
 }
@@ -365,7 +369,7 @@ hal_register_write(uint8_t address, uint8_t value)
     /* Add the Register Write command to the address. */
     address = HAL_TRX_CMD_RW | (HAL_TRX_CMD_RADDRM & address);
 
-    AVR_ENTER_CRITICAL_REGION();
+    HAL_ENTER_CRITICAL_REGION();
 
     HAL_SS_LOW(); /* Start the SPI transaction by pulling the Slave Select low. */
 
@@ -380,7 +384,7 @@ hal_register_write(uint8_t address, uint8_t value)
 
     HAL_SS_HIGH(); /* End the transaction by pulling the Slave Slect High. */
 
-    AVR_LEAVE_CRITICAL_REGION();
+    HAL_LEAVE_CRITICAL_REGION();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -445,102 +449,78 @@ hal_subregister_write(uint8_t address, uint8_t mask, uint8_t position,
  *          This version is optimized for use with contiki RF212BB driver
  *
  *  \param  rx_frame    Pointer to the data structure where the frame is stored.
- *  \param  rx_callback Pointer to callback function for receiving one byte at a time.
  */
 void
-hal_frame_read(hal_rx_frame_t *rx_frame, rx_callback_t rx_callback)
+hal_frame_read(hal_rx_frame_t *rx_frame)
 {
-    uint8_t *rx_data=0;
+	uint8_t *rx_data=0;
 
-    /*  check that we have either valid frame pointer or callback pointer */
-//  if (!rx_frame && !rx_callback)
-//      return;
+	HAL_ENTER_CRITICAL_REGION();
 
-    AVR_ENTER_CRITICAL_REGION();
+	HAL_SS_LOW();
 
-    HAL_SS_LOW();
+	/*Send frame read command.*/
+	SPDR = HAL_TRX_CMD_FR;
+	while ((SPSR & (1 << SPIF)) == 0) {;}
+	uint8_t frame_length = SPDR;
 
-    /*Send frame read command.*/
-    SPDR = HAL_TRX_CMD_FR;
-    while ((SPSR & (1 << SPIF)) == 0) {;}
-    uint8_t frame_length = SPDR;
+	/*Read frame length.*/
+	SPDR = frame_length;
+	while ((SPSR & (1 << SPIF)) == 0) {;}
+	frame_length = SPDR;
 
-    /*Read frame length.*/
-    SPDR = frame_length;
-    while ((SPSR & (1 << SPIF)) == 0) {;}
-    frame_length = SPDR;
+	/*Check for correct frame length.*/
+	if ((frame_length >= HAL_MIN_FRAME_LENGTH) && (frame_length <= HAL_MAX_FRAME_LENGTH)){
+		//GH: not needed
+		//uint16_t crc = 0;
+		uint8_t rx_status = 0; //variable for RX_STATUS information
+		rx_data = (rx_frame->data);
+		rx_frame->length = frame_length;
+		/*Upload frame buffer to data pointer. Calculate CRC.*/
+		SPDR = frame_length;
+		while ((SPSR & (1 << SPIF)) == 0) {;}
 
-    /*Check for correct frame length.*/
-    if ((frame_length >= HAL_MIN_FRAME_LENGTH) && (frame_length <= HAL_MAX_FRAME_LENGTH)){
+		do{
+			uint8_t tempData = SPDR;
+			SPDR = 0;       /*  dummy write */
 
-//GH: not needed
-    	//uint16_t crc = 0;
-    	uint8_t rx_status = 0; //variable for RX_STATUS information
-//      if (rx_frame){
-            rx_data = (rx_frame->data);
-            rx_frame->length = frame_length;
-//      } else {
-//          rx_callback(frame_length);
-//      }
-        /*Upload frame buffer to data pointer. Calculate CRC.*/
-        SPDR = frame_length;
-        while ((SPSR & (1 << SPIF)) == 0) {;}
+			*rx_data++ = tempData;
 
-        do{
-            uint8_t tempData = SPDR;
-            SPDR = 0;       /*  dummy write */
+			//GH: not necessary crc is checked in transceiver
+			//crc = _crc_ccitt_update(crc, tempData);
 
-//           if (rx_frame){
-                *rx_data++ = tempData;
-//          } else {
-//              rx_callback(tempData);
-//          }
+			while ((SPSR & (1 << SPIF)) == 0) {;}
 
-//GH: not necessary crc is checked in transceiver
-                //crc = _crc_ccitt_update(crc, tempData);
+		} while (--frame_length > 0);
 
-            while ((SPSR & (1 << SPIF)) == 0) {;}
-
-        } while (--frame_length > 0);
-
-        /*Read LQI value for this frame.*/
-//      if (rx_frame){
-            rx_frame->lqi = SPDR;
-//      } else {
-//          rx_callback(SPDR);
-//      }
+		/*Read LQI value for this frame.*/
+		rx_frame->lqi = SPDR;
 
 		SPDR = 0;       /*  dummy write */
-        //read ED
-        while ((SPSR & (1 << SPIF)) == 0) {;}
-        rx_frame->ed = SPDR;
-        SPDR = 0;       /*  dummy write */
-        //read RX_STATUS
-        while ((SPSR & (1 << SPIF)) == 0) {;}
-        rx_status = SPDR;
-        SPDR = 0;       /*  dummy write */
+		//read ED
+		while ((SPSR & (1 << SPIF)) == 0) {;}
+		rx_frame->ed = SPDR;
+		SPDR = 0;       /*  dummy write */
+		//read RX_STATUS
+		while ((SPSR & (1 << SPIF)) == 0) {;}
+		rx_status = SPDR;
+		SPDR = 0;       /*  dummy write */
 
-        HAL_SS_HIGH();
+		HAL_SS_HIGH();
 
-        /*Check calculated crc, and set crc field in hal_rx_frame_t accordingly.*/
-//      if (rx_frame){
-        //GH: not necessary crc is checked in transceiver
-        //rx_frame->crc = (crc == HAL_CALCULATED_CRC_OK);
-        rx_frame->crc = (rx_status & 0x80);
-        //      } else {
-//          rx_callback(crc != HAL_CALCULATED_CRC_OK);
-//      }
-    } else {
-        HAL_SS_HIGH();
+		/*Check calculated crc, and set crc field in hal_rx_frame_t accordingly.*/
+		//      if (rx_frame){
+		//GH: not necessary crc is checked in transceiver
+		rx_frame->crc = (rx_status & 0x80);
+	} else {
+		HAL_SS_HIGH();
 
-//      if (rx_frame){
-            rx_frame->length = 0;
-            rx_frame->lqi    = 0;
-            rx_frame->crc    = false;
-//      }
-    }
+		rx_frame->length = 0;
+		rx_frame->lqi    = 0;
+		rx_frame->crc    = false;
+	}
 
-    AVR_LEAVE_CRITICAL_REGION();
+	HAL_LEAVE_CRITICAL_REGION();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -554,7 +534,7 @@ void
 hal_frame_write(uint8_t *write_buffer, uint8_t length)
 {
     length &= HAL_TRX_CMD_RADDRM; /* Truncate length to maximum frame length. */
-    AVR_ENTER_CRITICAL_REGION();
+    HAL_ENTER_CRITICAL_REGION();
 
     HAL_SS_LOW(); /* Initiate the SPI transaction. */
 
@@ -579,7 +559,7 @@ hal_frame_write(uint8_t *write_buffer, uint8_t length)
 
     HAL_SS_HIGH(); /* Terminate SPI transaction. */
 
-    AVR_LEAVE_CRITICAL_REGION();
+    HAL_LEAVE_CRITICAL_REGION();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -594,7 +574,7 @@ hal_frame_write(uint8_t *write_buffer, uint8_t length)
 void
 hal_sram_read(uint8_t address, uint8_t length, uint8_t *data)
 {
-    AVR_ENTER_CRITICAL_REGION();
+    HAL_ENTER_CRITICAL_REGION();
 
     HAL_SS_LOW(); /* Initiate the SPI transaction. */
 
@@ -618,7 +598,7 @@ hal_sram_read(uint8_t address, uint8_t length, uint8_t *data)
 
     HAL_SS_HIGH();
 
-    AVR_LEAVE_CRITICAL_REGION();
+    HAL_LEAVE_CRITICAL_REGION();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -633,7 +613,7 @@ hal_sram_read(uint8_t address, uint8_t length, uint8_t *data)
 void
 hal_sram_write(uint8_t address, uint8_t length, uint8_t *data)
 {
-    AVR_ENTER_CRITICAL_REGION();
+    HAL_ENTER_CRITICAL_REGION();
 
     HAL_SS_LOW();
 
@@ -656,7 +636,7 @@ hal_sram_write(uint8_t address, uint8_t length, uint8_t *data)
 
     HAL_SS_HIGH();
 
-    AVR_LEAVE_CRITICAL_REGION();
+    HAL_LEAVE_CRITICAL_REGION();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -738,7 +718,7 @@ ISR(RADIO_VECT)
 			/* Received packet interrupt */
 			/* Buffer the frame and call rf212_interrupt to schedule poll for rf212 receive process */
 			//         if (rxframe.length) break;			//toss packet if last one not processed yet
-			hal_frame_read(&rxframe, NULL);
+			hal_frame_read(&rxframe);
 			if(bootloader_mode)
 				bootloader_pkt = 1;
 			else

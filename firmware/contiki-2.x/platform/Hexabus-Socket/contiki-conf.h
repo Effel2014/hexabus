@@ -46,8 +46,8 @@
 
 /* MCU and clock rate */
 #define PLATFORM       PLATFORM_AVR
-#define HEXABUS_SOCKET 4
-#define HEXABUS_USB    5
+#define HEXABUS_SOCKET 104
+#define HEXABUS_USB    105
 #define RAVEN_REVISION HEXABUS_SOCKET
 #ifndef F_CPU
 #define F_CPU          8000000UL
@@ -91,6 +91,7 @@ typedef unsigned long off_t;
 #else
 #define PACKETBUF_CONF_HDR_SIZE    0            //RF230 combined driver/mac handles headers internally
 #endif /*RF230BB || RF212BB*/
+#define RF230_CONF_RF212 1
 
 #define HEXABUS_FORWARDING 1
 
