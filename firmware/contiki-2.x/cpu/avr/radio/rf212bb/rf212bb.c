@@ -1153,6 +1153,7 @@ int rf212_send(const void *payload, unsigned short payload_len)
 			ENERGEST_ON(ENERGEST_TYPE_LISTEN);
 		}
 
+		on();
 		RELEASE_LOCK();
 
 		//GH: transition to receive mode should be done in interrupt service otherwise sent frame will be read from the frame buffer

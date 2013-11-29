@@ -3,6 +3,8 @@
  *
  *  Additional fixes for AVR contributed by:
  *
+ *	Phoebe Buckheister buckheister@itwm.fraunhofer.de
+ *	Günter Hildebrandt guenter.hildebrandt@esk.fraunhofer.de
  *	Colin O'Flynn coflynn@newae.com
  *	Eric Gnoske egnoske@gmail.com
  *	Blake Leverett bleverett@gmail.com
@@ -652,13 +654,20 @@ hal_frame_read(hal_rx_frame_t *rx_frame)
 
         /*Read LQI value for this frame.*/
 	    rx_frame->lqi = HAL_SPI_TRANSFER_READ();
+#if RF230_CONF_RF212
+      rx_frame->ed = HAL_SPI_TRANSFER(0);
+      rx_frame->rx_status = HAL_SPI_TRANSFER(0);
+      rx_frame->crc = (rx_frame->rx_status & 0x80);
+#endif
         
 #endif /* defined(__AVR_ATmega128RFA1__) */
 
+#if !RF230_CONF_RF212
         /* If crc was calculated set crc field in hal_rx_frame_t accordingly.
          * Else show the crc has passed the hardware check.
          */
         rx_frame->crc   = true;
+#endif
 
     } else {
         /* Length test failed */
@@ -732,7 +741,7 @@ hal_frame_write(uint8_t *write_buffer, uint8_t length)
  * \param length Length of the read burst
  * \param data Pointer to buffer where data is stored.
  */
-#if 0  //Uses 80 bytes (on Raven) omit unless needed
+#if 1  //Uses 80 bytes (on Raven) omit unless needed
 void
 hal_sram_read(uint8_t address, uint8_t length, uint8_t *data)
 {
@@ -742,14 +751,9 @@ hal_sram_read(uint8_t address, uint8_t length, uint8_t *data)
     HAL_SPI_TRANSFER(0x00);
     HAL_SPI_TRANSFER(address);
 
-    HAL_SPI_TRANSFER_WRITE(0);
-    HAL_SPI_TRANSFER_WAIT();
-
     /*Upload the chosen memory area.*/
     do{
-        *data++ = HAL_SPI_TRANSFER_READ();
-        HAL_SPI_TRANSFER_WRITE(0);
-        HAL_SPI_TRANSFER_WAIT();
+        *data++ = HAL_SPI_TRANSFER(0);
     } while (--length > 0);
 
     HAL_SPI_TRANSFER_CLOSE();
@@ -765,25 +769,24 @@ hal_sram_read(uint8_t address, uint8_t length, uint8_t *data)
  * \param length  Length of the write burst
  * \param data    Pointer to an array of bytes that should be written
  */
-//void
-//hal_sram_write(uint8_t address, uint8_t length, uint8_t *data)
-//{
-//    HAL_SPI_TRANSFER_OPEN();
+void
+hal_sram_write(uint8_t address, uint8_t length, uint8_t *data)
+{
+    HAL_SPI_TRANSFER_OPEN();
 
     /*Send SRAM write command.*/
-//    HAL_SPI_TRANSFER(0x40);
+    HAL_SPI_TRANSFER(0x40);
 
     /*Send address where to start writing to.*/
-//    HAL_SPI_TRANSFER(address);
+    HAL_SPI_TRANSFER(address);
 
     /*Upload the chosen memory area.*/
-//    do{
-//        HAL_SPI_TRANSFER(*data++);
-//    } while (--length > 0);
+    do{
+        HAL_SPI_TRANSFER(*data++);
+    } while (--length > 0);
 
-//    HAL_SPI_TRANSFER_CLOSE();
-
-//}
+    HAL_SPI_TRANSFER_CLOSE();
+}
 
 /*----------------------------------------------------------------------------*/
 /* This #if compile switch is used to provide a "standard" function body for the */
@@ -1012,6 +1015,10 @@ HAL_RF230_ISR()
 //      hal_bat_low_flag++; /* Increment BAT_LOW flag. */
         INTERRUPTDEBUG(16);
         ;
+     } else if (interrupt_source & HAL_CCA_ED_DONE) {
+        INTERRUPTDEBUG(17);
+     } else if (interrupt_source & HAL_AMI_MASK) {
+        INTERRUPTDEBUG(17);
      } else {
         INTERRUPTDEBUG(99);
 	    ;
@@ -1020,6 +1027,8 @@ HAL_RF230_ISR()
 #endif /* defined(__AVR_ATmega128RFA1__) */ 
 #   endif /* defined(DOXYGEN) */
 
+//GH: timer is not needed for HEXABUS platform
+#if RAVEN_REVISION != HEXABUS_SOCKET && RAVEN_REVISION != HEXABUS_USB
 /*----------------------------------------------------------------------------*/
 /* This #if compile switch is used to provide a "standard" function body for the */
 /* doxygen documentation. */
@@ -1035,6 +1044,7 @@ HAL_TIME_ISR()
 }
 #endif
 
+#endif
 /** @} */
 /** @} */
 

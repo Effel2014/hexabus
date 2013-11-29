@@ -538,6 +538,7 @@ typedef struct{
     bool crc;                             /**< Flag - did CRC pass for received frame? */
 #if RF230_CONF_RF212
     uint8_t ed;                           /**< Energy Detection value for received frame. */
+    uint8_t rx_status;                    /**< RX_STATUS byte for the received frame. */
 #endif
 } hal_rx_frame_t;
 
