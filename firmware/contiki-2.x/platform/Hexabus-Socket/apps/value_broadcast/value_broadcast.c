@@ -202,7 +202,9 @@ PROCESS_THREAD(value_broadcast_process, ev, data)
 	while(1) {
 		PROCESS_YIELD();
 
-		if (etimer_expired(&periodic)) {
+		if (ev == udp_handler_event && *(udp_handler_event_t*) data == UDP_HANDLER_UP) {
+			broadcast_value(0);
+		} else if (etimer_expired(&periodic)) {
 			etimer_reset(&periodic);
 
 			uint8_t i;

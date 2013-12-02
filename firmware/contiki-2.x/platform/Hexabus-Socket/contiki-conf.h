@@ -164,7 +164,8 @@ typedef unsigned long off_t;
 
 
 
-#define NETSTACK_CONF_MAC         nullmac_driver
+#define NETSTACK_CONF_MAC         provisioning_mac_driver
+#define PROVISIONING_NEXT_MAC     nullmac_driver
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf212_driver

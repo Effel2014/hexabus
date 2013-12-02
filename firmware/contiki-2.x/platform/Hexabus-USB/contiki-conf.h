@@ -254,7 +254,8 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 
   /* Network setup */
   /* No radio cycling */
-#define NETSTACK_CONF_MAC         nullmac_driver
+#define NETSTACK_CONF_MAC         provisioning_mac_driver
+#define PROVISIONING_NEXT_MAC     nullmac_driver
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 

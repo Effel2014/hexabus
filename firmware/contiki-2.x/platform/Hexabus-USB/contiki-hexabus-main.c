@@ -99,7 +99,6 @@
 //HEXABUS includes
 #include "button.h"
 #include "eeprom_variables.h"
-#include "bootloader_send.h"
 
 #define UIP_IP_BUF ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 rimeaddr_t macLongAddr;

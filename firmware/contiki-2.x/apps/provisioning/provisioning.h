@@ -36,9 +36,12 @@
 #define PROVISIONING_H_
 
 #include "contiki-conf.h"
+#include "net/mac/mac.h"
 
 /*indicates ongoing provisioning*/
 void provisioning_leds(void);
+
+extern const struct mac_driver provisioning_mac_driver;
 
 #if RAVEN_REVISION == HEXABUS_USB
 PROCESS_NAME(provisioning_process);

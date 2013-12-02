@@ -56,11 +56,12 @@
 #endif
 
 
-extern volatile int bootloader_mode;
-extern volatile int bootloader_pkt;
 extern uint16_t get_panid_from_eeprom(void);
 extern void get_aes128key_from_eeprom(uint8_t*);
 extern uint8_t encryption_enabled;
+
+static volatile char in_provisioning = 0;
+static volatile char provisioning_pkt_pending = 0;
 
 #define PROVISIONING_HEADER "PROVISIONING"
 #define PROV_TIMEOUT_USB 500
@@ -133,10 +134,7 @@ PROCESS_THREAD(provisioning_process, ev, data)
 
 	leds_off(LEDS_ALL);
 	PRINTF("provisioning: started as master\n");
-
-	//use bootloader mode for provisioning
-	bootloader_pkt = 0;
-	bootloader_mode = 1;
+	in_provisioning = 1;
 
 	extern uint16_t mac_dst_pan_id;
 	extern uint16_t mac_src_pan_id;
@@ -148,34 +146,27 @@ PROCESS_THREAD(provisioning_process, ev, data)
 	rf212_set_pan_addr(0x0001, 0, NULL);
 	time = clock_time();
 	//Wait max. PROV_TIMEOUT_USBs for provisioning message from Socket that we can start with the transfer
-		do {
-			PROCESS_PAUSE();
+	do {
+		PROCESS_PAUSE();
 
+		if (clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_USB)
+			break;
+		while (!provisioning_pkt_pending) {
+			PROCESS_PAUSE();
+			provisioning_leds();
 			if (clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_USB)
 				break;
-			while(!bootloader_pkt) {
-				PROCESS_PAUSE();
-				provisioning_leds();
-				if (clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_USB)
-					break;
-			}
-			length = rf212_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-			bootloader_pkt = 0;
-			//parse frame
-			if (length > 0) {
-				packetbuf_set_datalen(length);
-				NETSTACK_FRAMER.parse();
-			}
-		} while(packetbuf_datalen() != sizeof(PROVISIONING_HEADER) || strncmp((char*)packetbuf_dataptr(), PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER)));
+		}
+		provisioning_pkt_pending = 0;
+		NETSTACK_FRAMER.parse();
+	} while(packetbuf_datalen() != sizeof(PROVISIONING_HEADER) || strncmp((char*)packetbuf_dataptr(), PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER)));
 	// timer expired
 	if(clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_USB) {
 		mac_dst_pan_id = prov_pan_id;
 		mac_src_pan_id = prov_pan_id;
 		rf212_set_pan_addr(prov_pan_id, 0, NULL);
-		bootloader_mode = 0;
 		printf_P(PSTR(P_FAL_STR));
 	} else {
-
 		struct provisioning_m_t *packet;
 		char buf[sizeof(struct provisioning_m_t)];
 
@@ -190,14 +181,13 @@ PROCESS_THREAD(provisioning_process, ev, data)
 		packetbuf_set_datalen(sizeof(struct provisioning_m_t));
 
 		PRINTF("provisioning: sending provisioning message with pan_id: %x and AES_KEY: ", packet->pan_id);
-		int i;
-		for (i=0; i < 16; i++)
-		{
+		for (int i = 0; i < 16; i++) {
 			PRINTF("%x ", packet->aes_key[i]);
 		}
 		PRINTF("\n");
 		uint8_t tmp_enc = encryption_enabled;
 		encryption_enabled = 0;
+		NETSTACK_FRAMER.create();
 		NETSTACK_RDC.send(NULL,NULL);
 		packetbuf_clear();
 		encryption_enabled = tmp_enc;
@@ -205,12 +195,12 @@ PROCESS_THREAD(provisioning_process, ev, data)
 		mac_dst_pan_id = prov_pan_id;
 		mac_src_pan_id = prov_pan_id;
 		rf212_set_pan_addr(prov_pan_id, 0, NULL);
-		bootloader_mode = 0;
 		printf_P(PSTR(P_SUC_STR));
 	}
 
-	exit: ;
+exit:
 	//indicate normal operation
+	in_provisioning = 0;
 	leds_off(LEDS_ALL);
 	leds_on(LEDS_GREEN);
 	PROCESS_END();
@@ -222,13 +212,14 @@ PROCESS_THREAD(provisioning_process, ev, data)
 /*
  * the slave asks the master for its PAN ID
  */
-int provisioning_slave(void) {
+int provisioning_slave(void)
+{
 	clock_time_t time;
+
+	in_provisioning = 1;
+
 	leds_off(LEDS_GREEN);
 	PRINTF("provisioning: started as slave\n");
-	//use bootloader mode for provisioning
-	bootloader_pkt = 0;
-	bootloader_mode = 1;
 
 	extern uint16_t mac_dst_pan_id;
 	extern uint16_t mac_src_pan_id;
@@ -242,34 +233,37 @@ int provisioning_slave(void) {
 	rf212_set_pan_addr(0x0001, 0, NULL);
 	time = clock_time();
 	//Ask Master every 500ms and for max. PROV_TIMEOUT_SOCKETs to start provisioning
-		uint16_t length;
-		do {
-			if (clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_SOCKET)
-				break;
-			provisioning_leds();
-		    packetbuf_copyfrom(PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER));
-			packetbuf_set_datalen(sizeof(PROVISIONING_HEADER));
-			NETSTACK_RDC.send(NULL,NULL);
-			packetbuf_clear();
-			packetbuf_set_datalen(0);
-			_delay_ms(500);
-			length = rf212_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-			provisioning_leds();
-			//parse frame
-			if (length > 0) {
-				packetbuf_set_datalen(length);
-				NETSTACK_FRAMER.parse();
-			}
-		} while(packetbuf_datalen() != sizeof(struct provisioning_m_t) || strncmp((char*)packetbuf_dataptr(), PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER)));
+	uint16_t length;
+	do {
+		if (clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_SOCKET)
+			break;
+		provisioning_leds();
+		packetbuf_clear();
+		packetbuf_set_datalen(0);
+		packetbuf_copyfrom(PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER));
+		packetbuf_set_datalen(sizeof(PROVISIONING_HEADER));
+		NETSTACK_FRAMER.create();
+		NETSTACK_RDC.send(NULL,NULL);
+		for (int i = 0; !provisioning_pkt_pending && i < 100; i++) {
+			process_run();
+			_delay_ms(5);
+		}
+		provisioning_leds();
+		//parse frame
+		if (provisioning_pkt_pending) {
+			NETSTACK_FRAMER.parse();
+			provisioning_pkt_pending = 0;
+		}
+	} while(packetbuf_datalen() != sizeof(struct provisioning_m_t) || strncmp((char*)packetbuf_dataptr(), PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER)));
 	// timer expired
 	if(clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_SOCKET) {
 		mac_dst_pan_id = old_pan_id;
 		mac_src_pan_id = old_pan_id;
 		rf212_set_pan_addr(old_pan_id, 0, NULL);
-		bootloader_mode = 0;
 		encryption_enabled = tmp_enc;
 		//indicate normal operation
 		relay_leds();
+		in_provisioning = 0;
 		return -1;
 
 	} else {
@@ -277,9 +271,7 @@ int provisioning_slave(void) {
 		packet = (struct provisioning_m_t *)packetbuf_dataptr();
 		PRINTF("provisioning: new pan_id is: %x\n", packet->pan_id);
 		PRINTF("provisioning: new pan_id is: %x and new AES_KEY is: ", packet->pan_id);
-		int i;
-		for (i=0; i < 16; i++)
-		{
+		for (int i = 0; i < 16; i++) {
 			PRINTF("%x ", packet->aes_key[i]);
 		}
 		PRINTF("\n");
@@ -292,11 +284,66 @@ int provisioning_slave(void) {
 		mac_src_pan_id = packet->pan_id;
 		rf212_key_setup(packet->aes_key);
 		rf212_set_pan_addr(packet->pan_id, 0, NULL);
-		bootloader_mode = 0;
 		encryption_enabled = tmp_enc;
 		//indicate normal operation
 		relay_leds();
+		in_provisioning = 0;
 		return 0;
 	}
 }
 #endif
+
+extern const struct mac_driver PROVISIONING_NEXT_MAC;
+/*---------------------------------------------------------------------------*/
+static void
+send_packet(mac_callback_t sent, void *ptr)
+{
+  PROVISIONING_NEXT_MAC.send(sent, ptr);
+}
+/*---------------------------------------------------------------------------*/
+static void
+packet_input(void)
+{
+	if (in_provisioning) {
+		provisioning_pkt_pending = 1;
+	} else {
+		PROVISIONING_NEXT_MAC.input();
+	}
+}
+/*---------------------------------------------------------------------------*/
+static int
+on(void)
+{
+  return PROVISIONING_NEXT_MAC.on();
+}
+/*---------------------------------------------------------------------------*/
+static int
+off(int keep_radio_on)
+{
+  return PROVISIONING_NEXT_MAC.off(keep_radio_on);
+}
+/*---------------------------------------------------------------------------*/
+static unsigned short
+channel_check_interval(void)
+{
+  return PROVISIONING_NEXT_MAC.channel_check_interval();
+}
+/*---------------------------------------------------------------------------*/
+static void
+init(void)
+{
+	PROVISIONING_NEXT_MAC.init();
+}
+/*---------------------------------------------------------------------------*/
+#define STR2(x) #x
+#define STR(x) STR2(x)
+const struct mac_driver provisioning_mac_driver = {
+  "provisioning_mac(" STR(PROVISIONING_NEXT_MAC) ")",
+  init,
+  send_packet,
+  packet_input,
+  on,
+  off,
+  channel_check_interval,
+};
+/*---------------------------------------------------------------------------*/

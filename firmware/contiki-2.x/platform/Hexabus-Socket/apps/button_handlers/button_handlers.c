@@ -79,11 +79,14 @@ static void button_clicked(uint8_t button)
 #endif
 }
 
+#include <stdio.h>
 static void button_pressed(uint8_t button, uint8_t released, uint16_t ticks)
 {
 	if (released) {
 		provisioning_slave();
-		broadcast_value(0);
+		// easiest way to reinitialize the network stack for now
+		// skipping this might lead to strange combinations of PAN ID and IP address
+		watchdog_reboot();
 	} else {
 		provisioning_leds();
 	}

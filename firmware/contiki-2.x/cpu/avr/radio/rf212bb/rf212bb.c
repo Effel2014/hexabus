@@ -102,9 +102,6 @@ uint16_t RF212_sendpackets,RF212_receivepackets,RF212_sendfail,RF212_receivefail
 #endif
 
 /* Show if we are in bootloader mode */
-extern volatile int bootloader_mode;
-
-/* Show if we are in bootloader mode */
 uint8_t promiscuous_mode;
 
 #if RF212_CONF_TIMESTAMPS
@@ -1101,10 +1098,7 @@ int rf212_send(const void *payload, unsigned short payload_len)
 	//hal_subregister_write(SR_TRX_CMD, CMD_FORCE_TRX_OFF);
 	//delay_us(TIME_P_ON_TO_TRX_OFF);
 
-	if (bootloader_mode == 1)
-		radio_set_trx_state(PLL_ON); //enable auto ack
-	else
-		radio_set_trx_state(TX_ARET_ON); //enable auto ack
+	radio_set_trx_state(TX_ARET_ON); //enable auto ack
 
 
 	PRINTF("rf212: sending %d bytes\n", payload_len);

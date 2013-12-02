@@ -81,12 +81,6 @@ extern uint8_t debugflowsize,debugflow[DEBUGFLOWSIZE];
 #include "../rf230bb/at86rf230_registermap.h"
 #endif
 
-volatile int bootloader_mode = 0;
-volatile int bootloader_pkt = 0;
-
-extern uint8_t promiscuous_mode;
-
-/*============================ TYPDEFS =======================================*/
 /*============================ VARIABLES =====================================*/
 /** \brief This is a file internal variable that contains the 16 MSB of the
  *         system time.
@@ -989,10 +983,7 @@ HAL_RF230_ISR()
         if (rf230_last_rssi >= RF230_MIN_RX_POWER) {       
 #endif
          hal_frame_read(&rxframe);
-				 if(bootloader_mode)
-					 bootloader_pkt = 1;
-				 else
-					 rf212_interrupt();
+         rf212_interrupt();
 //       trx_end_callback(isr_timestamp);
 #ifdef RF230_MIN_RX_POWER
         }

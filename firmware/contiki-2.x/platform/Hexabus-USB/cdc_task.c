@@ -76,7 +76,6 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include "dev/leds.h"
-#include "bootloader_send.h"
 #include "eeprom_variables.h"
 #include "provisioning.h"
 
@@ -422,12 +421,6 @@ void menu_process(char c)
 					for(i = 0; i < 20; i++)_delay_ms(100);
 					watchdog_reboot();
 				}
-				break;
-
-			case 'f':
-				stdout = 0;
-				bootloader_send_data();
-				uart_usb_set_stdout();
 				break;
 
 			case 'c':
