@@ -109,7 +109,7 @@ typedef unsigned long off_t;
 #if RF230BB
 #define	USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET()		rf230_is_ready_to_send()
 #elif RF212BB
-#define	USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET()		rf212_is_ready_to_send()
+#define	USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET()		rf230_is_ready_to_send()
 #else
 static inline uint8_t radio_is_ready_to_send_() {
 	switch(radio_get_trx_state()) {
@@ -130,7 +130,7 @@ static inline uint8_t radio_is_ready_to_send_() {
 #ifndef USB_ETH_HOOK_SET_PROMISCIOUS_MODE
 
 #if RF230BB || RF212BB
-#define USB_ETH_HOOK_SET_PROMISCIOUS_MODE(value1, value2)	rf212_set_promiscuous_mode(value1, value2)
+#define USB_ETH_HOOK_SET_PROMISCIOUS_MODE(value1)	rf230_set_promiscuous_mode(value1)
 #else		
 #define USB_ETH_HOOK_SET_PROMISCIOUS_MODE(value)	radio_set_trx_state(value?RX_ON:RX_AACK_ON)
 #endif
@@ -262,7 +262,7 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #if RF230BB
 #define NETSTACK_CONF_RADIO       rf230_driver
 #elif RF212BB
-#define NETSTACK_CONF_RADIO       rf212_driver
+#define NETSTACK_CONF_RADIO       rf230_driver
 #endif
 
 #define CHANNEL_802_15_4          26
@@ -275,15 +275,12 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #define SICSLOWPAN_CONF_ACK_ALL   1
 /* Number of auto retry attempts 0-15 (0 implies don't use extended TX_ARET_ON mode with CCA) */
 
-#if RF230BB
 #define RF230_CONF_AUTORETRIES    2
-#elif RF212BB
 #define RF212_CONF_AUTORETRIES    2
-#endif
 
 /* CCA theshold energy -91 to -61 dBm (default -77). Set this smaller than the expected minimum rssi to avoid packet collisions */
 /* The Jackdaw menu 'm' command is helpful for determining the smallest ever received rssi */
-#define RF230_CONF_CCA_THRES    -85
+#define RF230_CONF_CCA_THRES    -82
 
 /* Allow sneeze command from jackdaw menu. Useful for testing CCA on other radios */
 /* During sneezing, any access to an RF230 register will hang the MCU and cause a watchdog reset */
@@ -327,9 +324,10 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
  * On the RF230 a reduced rx power threshold will not prevent autoack if enabled and requested.
  * These numbers applied to both Raven and Jackdaw give a maximum communication distance of about 15 cm
  * and a 10 meter range to a full-sensitivity RF230 sniffer.
-#define RF230_MAX_TX_POWER 15
 #define RF230_MIN_RX_POWER 30
  */
+// TX power must be clipped at 3dBm (tx max - 2dBm) for EMC compliance
+#define RF230_MAX_TX_POWER 2
 
 #define UIP_CONF_ROUTER             1
 #define RPL_BORDER_ROUTER           1

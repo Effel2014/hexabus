@@ -92,6 +92,7 @@ typedef unsigned long off_t;
 #define PACKETBUF_CONF_HDR_SIZE    0            //RF230 combined driver/mac handles headers internally
 #endif /*RF230BB || RF212BB*/
 #define RF230_CONF_RF212 1
+#define RF230_CONF_RX_BUFFERS 4
 
 #define HEXABUS_FORWARDING 1
 
@@ -168,12 +169,14 @@ typedef unsigned long off_t;
 #define PROVISIONING_NEXT_MAC     nullmac_driver
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
-#define NETSTACK_CONF_RADIO       rf212_driver
+#define NETSTACK_CONF_RADIO       rf230_driver
 
 #define CHANNEL_802_15_4          0
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 #define RF212_CONF_AUTOACK        1
+/* CCA threshold of -82dBm */
+#define RF230_CONF_CCA_THRES      -82
 /* Request 802.15.4 ACK on all packets sent (else autoretry). This is primarily for testing. */
 #define SICSLOWPAN_CONF_ACK_ALL   1
 /* Number of auto retry attempts 0-15 (0 implies don't use extended TX_ARET_ON mode with CCA) */
@@ -203,9 +206,10 @@ typedef unsigned long off_t;
  * On the RF230 a reduced rx power threshold will not prevent autoack if enabled and requested.
  * These numbers applied to both Raven and Jackdaw give a maximum communication distance of about 15 cm
  * and a 10 meter range to a full-sensitivity RF230 sniffer.
-#define RF230_MAX_TX_POWER 15
 #define RF230_MIN_RX_POWER 30
  */
+// TX power must be clipped at 3dBm (tx max - 2dBm) for EMC compliance
+#define RF230_MAX_TX_POWER 2
 
 #define UIP_CONF_ROUTER                 0
 #define UIP_CONF_ND6_SEND_RA		    0

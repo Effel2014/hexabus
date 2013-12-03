@@ -32,6 +32,7 @@
 /*
  * This code is almost device independent and should be easy to port.
  * Ported to Atmel RF230 21Feb2010 by dak
+ * Ported to Atmel RF212 2010-2013 by ghil/myeisha
  */
 
 #include <stdio.h>
@@ -87,9 +88,7 @@
 #endif
 
 /* We need to turn off autoack in promiscuous mode */
-#if RF230_CONF_AUTOACK
-static bool is_promiscuous;
-#endif
+bool is_promiscuous;
 
 /* RF230_CONF_AUTORETRIES is 1 plus the number written to the hardware. */
 /* Valid range 1-16, zero disables extended mode. */
@@ -141,8 +140,9 @@ struct timestamp {
 #define FOOTER1_CORRELATION 0x7f
 
 /* Leave radio on when USB powered or for testing low power protocols */
+/* Also, Hexabus Sockets can run with radio always on, so do that */
 /* This allows DEBUGFLOW indication of packets received when the radio is "off" */
-#if JACKDAW
+#if JACKDAW || RAVEN_REVISION == HEXABUS_SOCKET
 #define RADIOALWAYSON 1
 #else
 #define RADIOALWAYSON 0
@@ -213,9 +213,15 @@ typedef enum{
     TIME_P_ON_TO_TRX_OFF             = 510, /**<  Transition time from P_ON to TRX_OFF. */
     TIME_SLEEP_TO_TRX_OFF            = 880, /**<  Transition time from SLEEP to TRX_OFF. */
     TIME_RESET                       = 6,   /**<  Time to hold the RST pin low during reset */
+#if RF230_CONF_RF212
+    TIME_ED_MEASUREMENT              = 400, /**<  Time it takes to do a ED measurement. */
+    TIME_CCA                         = 400, /**<  Time it takes to do a CCA. */
+    TIME_PLL_LOCK                    = 370, /**<  Maximum time it should take for the PLL to lock. */
+#else
     TIME_ED_MEASUREMENT              = 140, /**<  Time it takes to do a ED measurement. */
     TIME_CCA                         = 140, /**<  Time it takes to do a CCA. */
     TIME_PLL_LOCK                    = 150, /**<  Maximum time it should take for the PLL to lock. */
+#endif
     TIME_FTN_TUNING                  = 25,  /**<  Maximum time it should take to do the filter tuning. */
     TIME_NOCLK_TO_WAKE               = 6,   /**<  Transition time from *_NOCLK to being awake. */
     TIME_CMD_FORCE_TRX_OFF           = 1,   /**<  Time it takes to execute the FORCE_TRX_OFF command. */
@@ -482,11 +488,26 @@ radio_set_trx_state(uint8_t new_state)
 
 void
 rf230_set_promiscuous_mode(bool isPromiscuous) {
-#if RF230_CONF_AUTOACK
-    is_promiscuous = isPromiscuous;
-/* TODO: Figure out when to pass promisc state to 802.15.4 */
-//    radio_set_trx_state(is_promiscuous?RX_ON:RX_AACK_ON);
-#endif
+  if (isPromiscuous) {
+    //enable promiscuous mode
+    hal_subregister_write(SR_AACK_PROM_MODE, 1);
+    hal_subregister_write(SR_AACK_DIS_ACK, 1); //disable acknowledgment generation
+    hal_subregister_write(SR_RX_SAFE_MODE, 1);
+    hal_subregister_write(SR_I_AM_COORD, 0);
+    hal_subregister_write(SR_SLOTTED_OPERATION, 0);
+    hal_subregister_write(SR_AACK_UPLD_RES_FT, 0); // disable reserved frames
+    hal_subregister_write(SR_AACK_FLTR_RES_FT, 0); //no frame filter
+    uint8_t prom_mode_mac_address[8] =
+    {	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    rf230_set_pan_addr(0x0000, 0x0000, prom_mode_mac_address);
+    radio_set_trx_state(RX_ON);
+  } else {
+    //disable promiscuous mode
+    hal_subregister_write(SR_AACK_PROM_MODE, 0);
+    hal_subregister_write(SR_AACK_DIS_ACK, 0);
+    hal_subregister_write(SR_RX_SAFE_MODE, 0);
+  }
+  is_promiscuous = isPromiscuous;
 }
 
 bool
@@ -583,8 +604,8 @@ off(void)
 static void
 set_txpower(uint8_t power)
 {
-  if (power > TX_PWR_17_2DBM){
-    power=TX_PWR_17_2DBM;
+  if (power > TX_PWR_MIN){
+    power=TX_PWR_MIN;
   }
   if (hal_get_slptr()) {
     DEBUGFLOW('f');
@@ -742,6 +763,14 @@ rf230_init(void)
 #endif
   hal_set_rst_high();
 
+#if RAVEN_REVISION == HEXABUS_USB
+	//set CLKM rate to 8 MHz, note: CLKM is clock of AT90USB1287
+	hal_register_write(RG_TRX_CTRL_0, 0x04);
+#elif RAVEN_REVISION == HEXABUS_SOCKET
+	//disable CLKM on HEXABUS_SOCKET
+	hal_register_write(RG_TRX_CTRL_0, 0x00);
+#endif
+
   /* Force transition to TRX_OFF */
   hal_subregister_write(SR_TRX_CMD, CMD_FORCE_TRX_OFF);
   delay_us(TIME_P_ON_TO_TRX_OFF);
@@ -752,10 +781,21 @@ rf230_init(void)
   uint8_t tvers = hal_register_read(RG_VERSION_NUM);
   uint8_t tmanu = hal_register_read(RG_MAN_ID_0);
 
+#if RF230_CONF_RF212
+  uint8_t tpartnum = hal_register_read(RG_PART_NUM);
+
+  if ((tvers != RF212_REVA))
+    PRINTF("rf230: Unsupported version %u\n",tvers);
+  if (tmanu != SUPPORTED_MANUFACTURER_ID)
+    PRINTF("rf213: Unsupported manufacturer ID %u\n",tmanu);
+  if (tpartnum != SUPPORTED_PART_NUMBER)
+    PRINTF("rf213: Unsupported part number %u\n",tpartnum);
+#else
   if ((tvers != RF230_REVA) && (tvers != RF230_REVB))
     PRINTF("rf230: Unsupported version %u\n",tvers);
   if (tmanu != SUPPORTED_MANUFACTURER_ID) 
     PRINTF("rf230: Unsupported manufacturer ID %u\n",tmanu);
+#endif
 
   PRINTF("rf230: Version %u, ID %u\n",tvers,tmanu);
   
@@ -784,6 +824,33 @@ void rf230_warm_reset(void) {
   /* Set up number of automatic retries 0-15 (0 implies PLL_ON sends instead of the extended TX_ARET mode */
   hal_subregister_write(SR_MAX_FRAME_RETRIES, RF230_CONF_AUTORETRIES );
  
+#if RAVEN_REVISION == HEXABUS_SOCKET || RAVEN_REVISION == RAVEN_REVISION == HEXABUS_SOCKET || RAVEN_REVISION == HEXABUS_USB
+  // set OQSPK modulation with 100KB/s (802.15.4 regulation Europe)
+  hal_register_write(RG_TRX_CTRL_2, 0x08);
+
+  /*configure listen before talk (LBT) (rf212 manual, page 88ff):
+   * CCA Mode: Do not transmit if energy detection (ED) is above threshold or
+   * 	carrier sense (CS) sensed a signal
+   * ED Threshold: According to European regulations, the ED threshold for LBT
+   * 	is -82 dBm (page 89, ref212 manual). The threshold can be
+   * 	calculated with "RSSI_BASE_VAL + 2.07 * CCA_ED_THRES" [dBm]
+   * CSMA_LBT_Mode: the transceiver can either operate in 802.15.4 CSMA mode
+   * 	or in the LBT mode according to European regulations. In LBT mode the
+   * 	radio will stay in TX_ARET mode until the channel is free, so the
+   * 	MAX_CSMA_RETRIES are neglected.
+   */
+  hal_subregister_write(SR_CCA_MODE, CCA_ED_OR_CS);
+  // enable LBT
+  hal_subregister_write(SR_CSMA_LBT_MODE, 0x01);
+
+  /* 802.15.4 specific defines. These are the default values */
+  hal_subregister_write(SR_RX_SAFE_MODE, 0);
+  hal_subregister_write(SR_I_AM_COORD, 0);
+  hal_subregister_write(SR_SLOTTED_OPERATION, 0);
+  hal_subregister_write(SR_FVN_MODE, 1); // acknowledge version 1 and version 2
+  hal_subregister_write(SR_AACK_UPLD_RES_FT, 0); // block reserved frames
+  hal_subregister_write(SR_AACK_FLTR_RES_FT, 0); //no frame filter for reserved frames
+#else
  /* Set up carrier sense/clear channel assesment parameters for extended operating mode */
   hal_subregister_write(SR_MAX_CSMA_RETRIES, 5 );//highest allowed retries
   hal_register_write(RG_CSMA_BE, 0x80);       //min backoff exponent 0, max 8 (highest allowed)
@@ -795,6 +862,7 @@ void rf230_warm_reset(void) {
 
   /* Carrier sense threshold (not implemented in RF230 or RF231) */
 // hal_subregister_write(SR_CCA_CS_THRES,1);
+#endif
 
   /* Receiver sensitivity. If nonzero rf231/128rfa1 saves 0.5ma in rx mode */
   /* Not implemented on rf230 but does not hurt to write to it */
@@ -804,25 +872,26 @@ void rf230_warm_reset(void) {
  hal_register_write(RG_RX_SYN, 0xf);
 #elif RF230_MIN_RX_POWER < 0
 #error RF230_MIN_RX_POWER can not be negative!
-#endif
+#else
   hal_register_write(RG_RX_SYN, RF230_MIN_RX_POWER/6 + 1); //1-15 -> -90 to -48dBm
 #endif
+#endif
 
-  /* CCA energy threshold = -91dB + 2*SR_CCA_ED_THRESH. Reset defaults to -77dB */
-  /* Use RF230 base of -91;  RF231 base is -90 according to datasheet */
+  /* CCA energy threshold = RSSI_BASE_VAL + 2*SR_CCA_ED_THRESH. Reset defaults to -77dB */
+  /* Use RF230 base of -91;  RF231 base is -90 according to datasheet, RF212 has -97 */
 #ifdef RF230_CONF_CCA_THRES
-#if RF230_CONF_CCA_THRES < -91
+#if RF230_CONF_CCA_THRES < RF230_RSSI_BASE_VAL
 #warning
-#warning RF230_CONF_CCA_THRES below hardware limit, setting to -91dBm
+#warning RF230_CONF_CCA_THRES below hardware limit, setting to RSSI_BASE_VAL
 #warning
   hal_subregister_write(SR_CCA_ED_THRES,0);  
-#elif RF230_CONF_CCA_THRES > -61
+#elif RF230_CONF_CCA_THRES > RF230_RSSI_BASE_VAL + 30
 #warning
-#warning RF230_CONF_CCA_THRES above hardware limit, setting to -61dBm
+#warning RF230_CONF_CCA_THRES above hardware limit, setting to RSSI_BASE_VAL + 30dBm
 #warning
   hal_subregister_write(SR_CCA_ED_THRES,15);  
 #else
-  hal_subregister_write(SR_CCA_ED_THRES,(RF230_CONF_CCA_THRES+91)/2);  
+  hal_subregister_write(SR_CCA_ED_THRES,(RF230_CONF_CCA_THRES+RF230_RSSI_BASE_VAL)/2);  
 #endif
 #endif
 
@@ -835,7 +904,7 @@ void rf230_warm_reset(void) {
 
 /* Limit tx power for testing miniature Raven mesh */
 #ifdef RF230_MAX_TX_POWER
-  set_txpower(RF230_MAX_TX_POWER);  //0=3dbm 15=-17.2dbm
+  set_txpower(RF230_MAX_TX_POWER);  // see rf230.h TX_PWR_* defines
 #endif
 }
 /*---------------------------------------------------------------------------*/
@@ -1469,6 +1538,8 @@ if (!RF230_receive_on) {
   if(footer[1] & FOOTER1_CRC_OK &&
      checksum == crc16_data(buf, len - AUX_LEN, 0)) {
 #endif
+#elif RF230_CONF_RF212
+  if (rxframe[rxframe_head].crc) {
 #endif /* RF230_CONF_CHECKSUM */
 
 /* Get the received signal strength for the packet, 0-84 dB above rx threshold */
@@ -1505,15 +1576,13 @@ if (!RF230_receive_on) {
     packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, t.time);
 #endif /* RF230_CONF_TIMESTAMPS */
 
-#if RF230_CONF_CHECKSUM
-#if FOOTER_LEN
+#if RF230_CONF_CHECKSUM && FOOTER_LEN || RF230_CONF_RF212
   } else {
     DEBUGFLOW('x');
     //PRINTF("bad crc");
     RIMESTATS_ADD(badcrc);
     len = AUX_LEN;
   }
-#endif
 #endif
 
 #ifdef RF230BB_HOOK_RX_PACKET
@@ -1530,6 +1599,68 @@ if (!RF230_receive_on) {
 }
 #endif
 }
+#if RF230_CONF_RF212
+uint8_t rf230_generate_random_byte(void)
+{
+  uint8_t rnd = 0;
+
+  rf230_generate_bytes(&rnd, 1);
+
+  return rnd;
+}
+
+void rf230_generate_bytes(uint8_t* data, uint8_t length)
+{
+  uint8_t j;
+
+  HAL_ENTER_CRITICAL_REGION();
+  uint8_t old_trx_state = radio_get_trx_state();
+  uint8_t old_rx_pdt_dis = hal_subregister_read(SR_RX_PDT_DIS);
+  radio_set_trx_state(RX_ON); // Random Number generator works only in basic TRX states
+  hal_subregister_write(SR_RX_PDT_DIS, 0); //also the preamble detector hast to be enabled
+
+  while (length--) {
+    data[length] = 0;
+    for (j = 0; j < 4; j++) {
+      data[length] <<= 2;
+      data[length] |= hal_subregister_read(SR_RND_VALUE);
+    }
+  }
+  hal_subregister_write(SR_RX_PDT_DIS, old_rx_pdt_dis);
+  radio_set_trx_state(old_trx_state);
+  HAL_LEAVE_CRITICAL_REGION();
+}
+/*---------------------------------------------------------------------------*/
+void rf230_key_setup(uint8_t *key)
+{
+  uint8_t aes_mode = 0x10; //see 9.1.3 in rf212 manual
+  hal_sram_write(AES_CTRL, 1, &aes_mode);
+  hal_sram_write(AES_KEY_START, 16, key);
+  //TODO: combining of setting the control register and the key will increase speed
+}
+/*---------------------------------------------------------------------------*/
+uint8_t rf230_cipher(uint8_t *data)
+{
+  uint8_t aes_mode_dir = 0x00; //ECB mode, see 9.1.4.1 in rf212 manual and AES encryption, see 9.1.4.1 in rf212 manual
+  uint8_t aes_request = 0x80;
+  uint8_t aes_status = 0x00;
+
+  hal_sram_write(AES_CTRL, 1, &(aes_mode_dir));
+  hal_sram_write(AES_KEY_START, 16, data);
+  hal_sram_write(AES_CTRL_MIRROR, 1, &aes_request);
+
+  delay_us(24);
+  while (((aes_status & 0x01) != 0x01) && ((aes_status & 0x80) != 0x80))
+    hal_sram_read(AES_STATUS, 1, &aes_status); // check for finished security operation
+  if ((aes_status & 0x80) != 0x80) {
+    hal_sram_read(AES_KEY_START, 16, data); //read encrypted data
+    return 0;
+  } else {
+    PRINTF("cipher error\n");
+  }
+  return 1;
+}
+#endif
 /*---------------------------------------------------------------------------*/
 void
 rf230_set_txpower(uint8_t power)

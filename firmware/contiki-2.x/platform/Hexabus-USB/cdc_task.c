@@ -54,6 +54,7 @@
 #include "cdc_task.h"
 #include "serial/uart_usb_lib.h"
 #include "rndis/rndis_protocol.h"
+#include "net/mac/frame802154.h"
 #include "rndis/rndis_task.h"
 #include "sicslow_ethernet.h"
 #if RF230BB
@@ -332,7 +333,7 @@ void menu_process(char c)
 				break;
 			case 's':
 				PRINTF_P(PSTR("Jackdaw now in sniffer mode\n\r"));
-				rf212_set_promiscuous_mode(1, NULL);
+				rf230_set_promiscuous_mode(1);
 				usbstick_mode.sendToRf = 0;
 				usbstick_mode.translate = 0;
 				break;
@@ -345,7 +346,8 @@ void menu_process(char c)
 			case 'n':
 				PRINTF_P(PSTR("Jackdaw now in network mode\n\r"));
 				extern uint64_t macLongAddr;
-				rf212_set_promiscuous_mode(0,(uint8_t *)&macLongAddr);
+				rf230_set_promiscuous_mode(0);
+				rf230_set_pan_addr(IEEE802154_PANID, 0x0000, (uint8_t*) &macLongAddr);
 				usbstick_mode.sendToRf = 1;
 				usbstick_mode.translate = 1;
 				usbstick_mode.raw = 0;
@@ -393,8 +395,8 @@ void menu_process(char c)
 				if (usb_eth_is_active == 0) PRINTF_P(PSTR("not "));
 				PRINTF_P(PSTR("active\n\r"));
 				PRINTF_P(PSTR("  * Promiscuous mode is "));
-				extern uint8_t promiscuous_mode;
-				if (promiscuous_mode == 0) PRINTF_P(PSTR("not "));
+				extern uint8_t is_promiscuous;
+				if (is_promiscuous == 0) PRINTF_P(PSTR("not "));
 				PRINTF_P(PSTR("active\n\r"));
 				break;
 

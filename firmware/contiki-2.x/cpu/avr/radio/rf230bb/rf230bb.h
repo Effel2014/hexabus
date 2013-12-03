@@ -3,6 +3,8 @@
  *
  *  Additional fixes for AVR contributed by:
  *
+ *	Günter Hildebrandt guenter.hildebrandt@esk.fraunhofer.de
+ *	Phoebe Buckheister buckheister@itwm.fraunhofer.de
  *	Colin O'Flynn coflynn@newae.com
  *	Eric Gnoske egnoske@gmail.com
  *	Blake Leverett bleverett@gmail.com
@@ -62,13 +64,21 @@
 
 
 /*============================ MACROS ========================================*/
+#ifdef RF230_CONF_RF212
+#define SUPPORTED_PART_NUMBER                   ( 7 )
+#define RF212_REVA                              ( 1 )
+#define SUPPORTED_MANUFACTURER_ID               ( 31 )
+#else
 #define SUPPORTED_PART_NUMBER                   ( 2 )
 #define RF230_REVA                              ( 1 )
 #define RF230_REVB                              ( 2 )
+#endif
 #define SUPPORTED_MANUFACTURER_ID               ( 31 )
 
 #if defined(__AVR_ATmega128RFA1__)
 #define RF230_SUPPORTED_INTERRUPT_MASK          ( 0xFF )
+#elif RF230_CONF_RF212
+#define RF230_SUPPORTED_INTERRUPT_MASK          ( HAL_TRX_END_MASK | HAL_RX_START_MASK | HAL_BAT_LOW_MASK | HAL_AMI_MASK )
 #else
 /* RF230 does not support RX_START interrupts in extended mode, but it seems harmless to always enable it. */
 /* In non-extended mode this allows RX_START to sample the RF rssi at the end of the preamble */
@@ -77,18 +87,31 @@
 #define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0C )  //disable bat low, trx underrun, pll lock/unlock
 #endif
 
+#if RF230_CONF_RF212
+#define RF230_MIN_CHANNEL                       ( 0 )
+#define RF230_MAX_CHANNEL                       ( 0 )
+#else
 #define RF230_MIN_CHANNEL                       ( 11 )
 #define RF230_MAX_CHANNEL                       ( 26 )
+#endif
 #define RF230_MIN_ED_THRESHOLD                  ( 0 )
 #define RF230_MAX_ED_THRESHOLD                  ( 15 )
 #define RF230_MAX_TX_FRAME_LENGTH               ( 127 ) /**< 127 Byte PSDU. */
 //#define RF230_MAX_PACKET_LEN                    127
 
+#if RF230_CONF_RF212
+#define TX_PWR_0DBM                             ( 0 )
+#define TX_PWR_31DBM                            ( 31 )
+
+#define TX_PWR_MAX                             TX_PWR_0DBM
+#define TX_PWR_MIN                             TX_PWR_31DBM
+#else
 #define TX_PWR_3DBM                             ( 0 )
 #define TX_PWR_17_2DBM                          ( 15 )
 
 #define TX_PWR_MAX                             TX_PWR_3DBM
 #define TX_PWR_MIN                             TX_PWR_17_2DBM
+#endif
 #define TX_PWR_UNDEFINED                       (TX_PWR_MIN+1)
 
 
@@ -104,8 +127,18 @@
 #define RC_OSC_REFERENCE_COUNT_MAX  (1.005*F_CPU*31250UL/8000000UL)
 #define RC_OSC_REFERENCE_COUNT_MIN  (0.995*F_CPU*31250UL/8000000UL)
 
+#if RF230_CONF_RF212
+#define RF230_RSSI_BASE_VAL -97
+#else
+#define RF230_RSSI_BASE_VAL -91
+#endif
+
 #ifndef RF_CHANNEL
-#define RF_CHANNEL              26
+#if RF230_CONF_RF212
+#define RF_CHANNEL              0
+#else
+#define RF_CHANNEL              16
+#endif
 #endif
 /*============================ TYPEDEFS ======================================*/
 
@@ -166,10 +199,16 @@ typedef enum{
  *
  */
 typedef enum{
+#if RF230_CONF_RF212
+    CCA_ED                    = 1,    /**< Use energy detection above threshold mode. */
+    CCA_CS                    = 2,    /**< Use carrier sense mode. */
+    CCA_ED_OR_CS              = 0     /**< Use a combination of both energy detection and carrier sense. */
+#else
 //    CCA_ED                   = 0,    /**< Use energy detection above threshold mode. */ conflicts with atmega128rfa1 mcu definition
     CCA_ENERGY_DETECT         = 0,    /**< Use energy detection above threshold mode. */
     CCA_CARRIER_SENSE         = 1,    /**< Use carrier sense mode. */
     CCA_CARRIER_SENSE_WITH_ED = 2     /**< Use a combination of both energy detection and carrier sense. */
+#endif
 }radio_cca_mode_t;
 
 
@@ -227,6 +266,17 @@ extern uint8_t rf230_last_correlation,rf230_last_rssi,rf230_smallest_rssi;
 uint8_t rf230_get_raw_rssi(void);
 
 #define rf230_rssi	rf230_get_raw_rssi
+
+#if RF230_CONF_RF212
+/* This function returns a true random byte */
+uint8_t rf230_generate_random_byte(void);
+/* This function stores "length" truly random bytes in data */
+void rf230_generate_bytes(uint8_t* data, uint8_t length);
+/* This function copies the given key to the transceivers SRAM */
+void rf230_key_setup(uint8_t *key);
+/* AES ciphering function. 16 bytes in data will be ECB-encrypted and overwritten */
+uint8_t rf230_cipher(uint8_t *data);
+#endif
 
 #endif
 /** @} */

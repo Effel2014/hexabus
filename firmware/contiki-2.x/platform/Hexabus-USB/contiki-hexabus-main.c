@@ -254,7 +254,7 @@ void generate_random_pan_id_and_aes_key(void)
 	{
 		uint8_t key[16];
 		//AES key
-		rf212_generate_key(key);
+		rf230_generate_bytes(key, 16);
 		eeprom_write_block(key, (void *) EE_ENCRYPTION_KEY,
 				EE_ENCRYPTION_KEY_SIZE);
 
@@ -328,8 +328,9 @@ static void initialize(void)
 	memcpy(&uip_lladdr.addr, &tmp_addr.u8, 8);
 #endif
 
-	rf212_set_pan_addr(get_panid_from_eeprom(), get_panaddr_from_eeprom(),
+	rf230_set_pan_addr(get_panid_from_eeprom(), get_panaddr_from_eeprom(),
 			(uint8_t *) &tmp_addr.u8);
+	rf230_set_channel(0);
 
 	extern uint16_t mac_dst_pan_id;
 	extern uint16_t mac_src_pan_id;
@@ -346,7 +347,7 @@ static void initialize(void)
 	NETSTACK_NETWORK.init();
 
 #if ANNOUNCE
-	PRINTA("MAC address %x:%x:%x:%x:%x:%x:%x:%x\n\r",tmp_addr.u8[0],tmp_addr.u8[1],tmp_addr.u8[2],tmp_addr.u8[3],tmp_addr.u8[4],tmp_addr.u8[5],tmp_addr.u8[6],tmp_addr.u8[7]);PRINTA("%s %s, channel %u",NETSTACK_MAC.name, NETSTACK_RDC.name,rf212_get_channel());PRINTA("\n");
+	PRINTA("MAC address %x:%x:%x:%x:%x:%x:%x:%x\n\r",tmp_addr.u8[0],tmp_addr.u8[1],tmp_addr.u8[2],tmp_addr.u8[3],tmp_addr.u8[4],tmp_addr.u8[5],tmp_addr.u8[6],tmp_addr.u8[7]);PRINTA("%s %s, channel %u",NETSTACK_MAC.name, NETSTACK_RDC.name,rf230_get_channel());PRINTA("\n");
 #endif
 
 #if UIP_CONF_IPV6_RPL

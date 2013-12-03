@@ -48,13 +48,13 @@ cdc_ecm_set_ethernet_packet_filter(void) {
 	if(usb_ecm_packet_filter & PACKET_TYPE_PROMISCUOUS) {
 		PRINTF_P(PSTR("PROMISCUOUS "));
 #if RF212BB
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true, NULL);
+		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
 #elif RF230BB
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
 #endif
 	} else {
 #if RF212BB
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false, NULL);
+		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
 #elif RF230BB
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
 #endif
@@ -207,7 +207,7 @@ cdc_ecm_process(void) {
 			rf230_set_promiscuous_mode(true);
 
 #elif RF212BB
-			rf212_set_promiscuous_mode(true, NULL);
+			rf230_set_promiscuous_mode(true);
 #else		
 			radio_set_trx_state(RX_ON);
 #endif

@@ -378,19 +378,19 @@
 #define SR_CSMA_SEED_0               0x2d, 0xff, 0
 /** Offset for register CSMA_SEED_1 */
 #define RG_CSMA_SEED_1                   (0x2e)
-/** Offset for register CSMA_BE */
-#define RG_CSMA_BE                      0x2f
+/** Access parameters for AACK_SET_PD bit in register @ref RG_CSMA_SEED_1 */
+#define SR_AACK_SET_PD               0x2e, 0x20, 5
 #if !RF230_CONF_RF212
 /** Access parameters for sub-register MIN_BE in register @ref RG_CSMA_SEED_1 */
 #define SR_MIN_BE                    0x2e, 0xc0, 6
-/** Access parameters for AACK_SET_PD bit in register @ref RG_CSMA_SEED_1 */
-#define SR_AACK_SET_PD               0x2e, 0x20, 5
 //#define SR_reserved_2e_2             0x2e, 0x30, 4
 #else
 /** Subregister AACK_DIS_ACK */
 #define SR_AACK_DIS_ACK                   0x2e, 0x10, 4
 #define SR_FVN_MODE						  0x2e, 0xc0, 6
 #endif
+/** Offset for register CSMA_BE */
+#define RG_CSMA_BE                      0x2f
 /** Access parameters for sub-register I_AM_COORD in register @ref RG_CSMA_SEED_1 */
 #define SR_I_AM_COORD                0x2e, 0x08, 3
 /** Access parameters for sub-register CSMA_SEED_1 in register @ref RG_CSMA_SEED_1 */

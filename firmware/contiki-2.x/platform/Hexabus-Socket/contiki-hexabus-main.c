@@ -252,12 +252,13 @@ void initialize(void)
   rf230_set_channel(CHANNEL_802_15_4);
 
 #elif RF212BB
-  rf212_set_pan_addr(
+  rf230_set_pan_addr(
 	get_panid_from_eeprom(),
  	get_panaddr_from_eeprom(),
  	(uint8_t *)&addr.u8
    );
 #endif
+	rf230_set_channel(0);
 
 	extern uint16_t mac_dst_pan_id;
 	extern uint16_t mac_src_pan_id;
@@ -279,7 +280,7 @@ void initialize(void)
  #if RF230BB
   PRINTF("%s %s, channel %u",NETSTACK_MAC.name, NETSTACK_RDC.name, rf230_get_channel());
  #elif RF212BB
-  PRINTF("%s %s, channel %u",NETSTACK_MAC.name, NETSTACK_RDC.name, rf212_get_channel());
+  PRINTF("%s %s, channel %u",NETSTACK_MAC.name, NETSTACK_RDC.name, rf230_get_channel());
  #endif /* RF230BB */
   if (NETSTACK_RDC.channel_check_interval) {//function pointer is zero for sicslowmac
     unsigned short tmp;

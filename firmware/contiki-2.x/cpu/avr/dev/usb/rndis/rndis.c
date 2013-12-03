@@ -618,9 +618,9 @@ rndis_handle_config_parm(const char* parmname,const uint8_t* parmvalue,size_t pa
 		if (parmvalue[0] == '0') {
 /*TODO check if needed
 			extern uint64_t macLongAddr;
-			rf212_set_promiscuous_mode(0,(uint8_t *)&macLongAddr);
+			rf230_set_promiscuous_mode(0,(uint8_t *)&macLongAddr);
 */			} else {
-			rf212_set_promiscuous_mode(1, NULL);
+			rf230_set_promiscuous_mode(1);
 		}
 
 	}
@@ -1097,13 +1097,13 @@ void rndis_packetFilter(uint32_t newfilter)
 {
 	if (newfilter & NDIS_PACKET_TYPE_PROMISCUOUS) {
 #if RF212BB
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true, NULL);
+		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
 #else
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
 #endif
 	} else {
    #if RF212BB
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false, NULL);
+		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
 #else
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
 #endif

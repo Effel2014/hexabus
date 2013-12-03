@@ -128,7 +128,6 @@ PROCESS_THREAD(provisioning_process, ev, data)
 
 	static clock_time_t time;
 	static uint16_t prov_pan_id;
-	static uint16_t length;
 
 	PROCESS_BEGIN();
 
@@ -143,28 +142,28 @@ PROCESS_THREAD(provisioning_process, ev, data)
 	mac_dst_pan_id = 0x0001;
 	mac_src_pan_id = 0x0001;
 
-	rf212_set_pan_addr(0x0001, 0, NULL);
+	rf230_set_pan_addr(0x0001, 0, NULL);
 	time = clock_time();
 	//Wait max. PROV_TIMEOUT_USBs for provisioning message from Socket that we can start with the transfer
 	do {
 		PROCESS_PAUSE();
 
-		if (clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_USB)
+		if (clock_time() - time > (unsigned long long) CLOCK_SECOND * PROV_TIMEOUT_USB)
 			break;
 		while (!provisioning_pkt_pending) {
 			PROCESS_PAUSE();
 			provisioning_leds();
-			if (clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_USB)
+			if (clock_time() - time > (unsigned long long) CLOCK_SECOND * PROV_TIMEOUT_USB)
 				break;
 		}
 		provisioning_pkt_pending = 0;
 		NETSTACK_FRAMER.parse();
 	} while(packetbuf_datalen() != sizeof(PROVISIONING_HEADER) || strncmp((char*)packetbuf_dataptr(), PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER)));
 	// timer expired
-	if(clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_USB) {
+	if(clock_time() - time > (unsigned long long) CLOCK_SECOND * PROV_TIMEOUT_USB) {
 		mac_dst_pan_id = prov_pan_id;
 		mac_src_pan_id = prov_pan_id;
-		rf212_set_pan_addr(prov_pan_id, 0, NULL);
+		rf230_set_pan_addr(prov_pan_id, 0, NULL);
 		printf_P(PSTR(P_FAL_STR));
 	} else {
 		struct provisioning_m_t *packet;
@@ -194,7 +193,7 @@ PROCESS_THREAD(provisioning_process, ev, data)
 		//provisioning_done_leds();
 		mac_dst_pan_id = prov_pan_id;
 		mac_src_pan_id = prov_pan_id;
-		rf212_set_pan_addr(prov_pan_id, 0, NULL);
+		rf230_set_pan_addr(prov_pan_id, 0, NULL);
 		printf_P(PSTR(P_SUC_STR));
 	}
 
@@ -230,7 +229,7 @@ int provisioning_slave(void)
 	uint8_t tmp_enc = encryption_enabled;
 	encryption_enabled = 0;
 
-	rf212_set_pan_addr(0x0001, 0, NULL);
+	rf230_set_pan_addr(0x0001, 0, NULL);
 	time = clock_time();
 	//Ask Master every 500ms and for max. PROV_TIMEOUT_SOCKETs to start provisioning
 	uint16_t length;
@@ -259,7 +258,7 @@ int provisioning_slave(void)
 	if(clock_time() - time > CLOCK_SECOND * PROV_TIMEOUT_SOCKET) {
 		mac_dst_pan_id = old_pan_id;
 		mac_src_pan_id = old_pan_id;
-		rf212_set_pan_addr(old_pan_id, 0, NULL);
+		rf230_set_pan_addr(old_pan_id, 0, NULL);
 		encryption_enabled = tmp_enc;
 		//indicate normal operation
 		relay_leds();
@@ -282,8 +281,8 @@ int provisioning_slave(void)
 		provisioning_done_leds();
 		mac_dst_pan_id = packet->pan_id;
 		mac_src_pan_id = packet->pan_id;
-		rf212_key_setup(packet->aes_key);
-		rf212_set_pan_addr(packet->pan_id, 0, NULL);
+		rf230_key_setup(packet->aes_key);
+		rf230_set_pan_addr(packet->pan_id, 0, NULL);
 		encryption_enabled = tmp_enc;
 		//indicate normal operation
 		relay_leds();

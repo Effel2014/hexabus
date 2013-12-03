@@ -4,12 +4,14 @@
  *  Additional fixes for AVR contributed by:
  *
  *	Günter Hildebrandt guenter.hildebrandt@esk.fraunhofer.de
+ *	Phoebe Buckheister buckheister@itwm.fraunhofer.de
  *	Colin O'Flynn coflynn@newae.com
  *	Eric Gnoske egnoske@gmail.com
  *	Blake Leverett bleverett@gmail.com
  *	Mike Vidales mavida404@gmail.com
  *	Kevin Brown kbrown3@uccs.edu
  *	Nate Bohlmann nate@elfwerks.com
+ *  David Kopf dak664@embarqmail.com
  *
  *   All rights reserved.
  *
@@ -39,14 +41,13 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *    \addtogroup radiorf212
+ *    \addtogroup radiorf230
  *   @{
  */
 /**
  *  \file
  *  \brief This file contains radio driver code.
  *
- *   $Id: rf212bb.h,v 1.1 2009/07/08 16:17:07 dak664 Exp $
  */
 
 #ifndef RADIO_H
@@ -54,25 +55,59 @@
 /*============================ INCLUDE =======================================*/
 #include <stdint.h>
 #include <stdbool.h>
-#include "contiki-conf.h"
 #include "../rf230bb/at86rf230_registermap.h"
 #include "../rf230bb/hal.h"
 
 /*============================ MACROS ========================================*/
+#ifdef RF230_CONF_RF212
 #define SUPPORTED_PART_NUMBER                   ( 7 )
 #define RF212_REVA                              ( 1 )
 #define SUPPORTED_MANUFACTURER_ID               ( 31 )
-#define RF212_SUPPORTED_INTERRUPT_MASK          ( HAL_TRX_END_MASK | HAL_RX_START_MASK | HAL_BAT_LOW_MASK | HAL_AMI_MASK )
+#else
+#define SUPPORTED_PART_NUMBER                   ( 2 )
+#define RF230_REVA                              ( 1 )
+#define RF230_REVB                              ( 2 )
+#endif
+#define SUPPORTED_MANUFACTURER_ID               ( 31 )
 
-#define RF212_MIN_CHANNEL                       ( 0 )
-#define RF212_MAX_CHANNEL                       ( 0 )
-#define RF212_MIN_ED_THRESHOLD                  ( 0 )
-#define RF212_MAX_ED_THRESHOLD                  ( 15 )
-#define RF212_MAX_TX_FRAME_LENGTH               ( 127 ) /**< 127 Byte PSDU. */
-#define RF212_MAX_FRAME_RETRIES					( 2 )
+#if defined(__AVR_ATmega128RFA1__)
+#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0xFF )
+#elif RF230_CONF_RF212
+#define RF230_SUPPORTED_INTERRUPT_MASK          ( HAL_TRX_END_MASK | HAL_RX_START_MASK | HAL_BAT_LOW_MASK | HAL_AMI_MASK )
+#else
+/* RF230 does not support RX_START interrupts in extended mode, but it seems harmless to always enable it. */
+/* In non-extended mode this allows RX_START to sample the RF rssi at the end of the preamble */
+//#define RF230_SUPPORTED_INTERRUPT_MASK        ( 0x08 )  //enable trx end only
+//#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0F ) //disable bat low, trx underrun
+#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0C )  //disable bat low, trx underrun, pll lock/unlock
+#endif
 
-#define RF212_TX_PWR_5DBM_BOOST_MODE            ( 0xe8 )
-#define RF212_ENABLE_PA_BOOST					(1 << 7)
+#if RF230_CONF_RF212
+#define RF230_MIN_CHANNEL                       ( 0 )
+#define RF230_MAX_CHANNEL                       ( 0 )
+#else
+#define RF230_MIN_CHANNEL                       ( 11 )
+#define RF230_MAX_CHANNEL                       ( 26 )
+#endif
+#define RF230_MIN_ED_THRESHOLD                  ( 0 )
+#define RF230_MAX_ED_THRESHOLD                  ( 15 )
+#define RF230_MAX_TX_FRAME_LENGTH               ( 127 ) /**< 127 Byte PSDU. */
+//#define RF230_MAX_PACKET_LEN                    127
+
+#if RF230_CONF_RF212
+#define TX_PWR_0DBM                             ( 0 )
+#define TX_PWR_31DBM                            ( 31 )
+
+#define TX_PWR_MAX                             TX_PWR_0DBM
+#define TX_PWR_MIN                             TX_PWR_31DBM
+#else
+#define TX_PWR_3DBM                             ( 0 )
+#define TX_PWR_17_2DBM                          ( 15 )
+
+#define TX_PWR_MAX                             TX_PWR_3DBM
+#define TX_PWR_MIN                             TX_PWR_17_2DBM
+#endif
+#define TX_PWR_UNDEFINED                       (TX_PWR_MIN+1)
 
 
 #define BATTERY_MONITOR_HIGHEST_VOLTAGE         ( 15 )
@@ -87,21 +122,18 @@
 #define RC_OSC_REFERENCE_COUNT_MAX  (1.005*F_CPU*31250UL/8000000UL)
 #define RC_OSC_REFERENCE_COUNT_MIN  (0.995*F_CPU*31250UL/8000000UL)
 
-#define TRX_CTRL2_BPSK_20KB						( 0x00 )
-#define TRX_CTRL2_OQPSK_100KB					( 0x08 )
-
-#define CC_BAND 								0
-#define CC_CHANNEL								0
-
-//according to 802.15.4 one of these options is mandatory
-#define CCA_ED_OR_CS							(0x00)
-#define CCA_ED_AND_CS							(0x03)
-#define CCA_ED_DEFAULT_THRESHOLD				(0x07)
-#define CCA_ED_MAX_THRESHOLD_BPSK_20			(0x08)
-#define CCA_LBT_ENABLED							(0x01)
+#if RF230_CONF_RF212
+#define RF230_RSSI_BASE_VAL -97
+#else
+#define RF230_RSSI_BASE_VAL -91
+#endif
 
 #ifndef RF_CHANNEL
+#if RF230_CONF_RF212
 #define RF_CHANNEL              0
+#else
+#define RF_CHANNEL              16
+#endif
 #endif
 /*============================ TYPEDEFS ======================================*/
 
@@ -125,7 +157,7 @@
  */
 typedef enum{
     RADIO_SUCCESS = RADIO_STATUS_START_VALUE,  /**< The requested service was performed successfully. */
-    RADIO_UNSUPPORTED_DEVICE,         /**< The connected device is not an Atmel AT86RF212. */
+    RADIO_UNSUPPORTED_DEVICE,         /**< The connected device is not an Atmel AT86RF230. */
     RADIO_INVALID_ARGUMENT,           /**< One or more of the supplied function arguments are invalid. */
     RADIO_TIMED_OUT,                  /**< The requested service timed out. */
     RADIO_WRONG_STATE,                /**< The end-user tried to do an invalid state transition. */
@@ -162,15 +194,22 @@ typedef enum{
  *
  */
 typedef enum{
+#if RF230_CONF_RF212
     CCA_ED                    = 1,    /**< Use energy detection above threshold mode. */
-    CCA_CARRIER_SENSE         = 2,    /**< Use carrier sense mode. */
-    CCA_CARRIER_SENSE_WITH_ED = 0     /**< Use a combination of both energy detection and carrier sense. */
+    CCA_CS                    = 2,    /**< Use carrier sense mode. */
+    CCA_ED_OR_CS              = 0     /**< Use a combination of both energy detection and carrier sense. */
+#else
+//    CCA_ED                   = 0,    /**< Use energy detection above threshold mode. */ conflicts with atmega128rfa1 mcu definition
+    CCA_ENERGY_DETECT         = 0,    /**< Use energy detection above threshold mode. */
+    CCA_CARRIER_SENSE         = 1,    /**< Use carrier sense mode. */
+    CCA_CARRIER_SENSE_WITH_ED = 2     /**< Use a combination of both energy detection and carrier sense. */
+#endif
 }radio_cca_mode_t;
 
 
 /** \brief  This enumeration defines the possible CLKM speeds.
  *
- *          These constants are extracted from the RF212 datasheet.
+ *          These constants are extracted from the RF230 datasheet.
  *
  */
 typedef enum{
@@ -183,84 +222,56 @@ typedef enum{
 }radio_clkm_speed_t;
 
 typedef void (*radio_rx_callback) (uint16_t data);
-extern uint8_t rxMode;
+
+
+/*	Hook Documentation 
+**	
+**	Sniffing Hooks:
+**		RF230BB_HOOK_TX_PACKET(buffer,total_len)
+**		RF230BB_HOOK_RX_PACKET(buf,len)
+**
+**	RF230BB_HOOK_IS_SEND_ENABLED()
+**	RF230BB_HOOK_RADIO_ON()
+**	RF230BB_HOOK_RADIO_OFF()
+**	
+*/
+
+
 /*============================ PROTOTYPES ====================================*/
-const struct radio_driver rf212_driver;
-int rf212_init(void);
-int rf212_get_channel(void);
-void rf212_set_channel(int c);
-void rf212_set_pan_addr(uint16_t pan,uint16_t addr,uint8_t *ieee_addr);
-void rf212_set_txpower(uint8_t power);
+
+const struct radio_driver rf230_driver;
+
+int rf230_init(void);
+void rf230_warm_reset(void);
+void rf230_start_sneeze(void);
+//int rf230_on(void);
+//int rf230_off(void);
+void rf230_set_channel(uint8_t channel);
+void rf230_listen_channel(uint8_t channel);
+uint8_t rf230_get_channel(void);
+void rf230_set_pan_addr(unsigned pan,unsigned addr,const uint8_t ieee_addr[8]);
+void rf230_set_txpower(uint8_t power);
+uint8_t rf230_get_txpower(void);
+
+void rf230_set_promiscuous_mode(bool isPromiscuous);
+bool rf230_is_ready_to_send();
+
+extern uint8_t rf230_last_correlation,rf230_last_rssi,rf230_smallest_rssi;
+
+uint8_t rf230_get_raw_rssi(void);
+
+#define rf230_rssi	rf230_get_raw_rssi
+
+#if RF230_CONF_RF212
 /* This function returns a true random byte */
-uint8_t rf212_generate_random_byte(void);
-/* This function stores a true random 128bit AES key in pointer key */
-void rf212_generate_key(uint8_t* key);
-/* This function copies the given key to the rf212 transceivers SRAM */
-void rf212_key_setup(uint8_t *key);
-/* AES ciphering function. Input parameter: payload to be ciphered. Output: the same variable is encrypted and overwritten. */
-uint8_t rf212_cipher(uint8_t *data);
-/*
- *  This function enables (onoff==1) or disables (onoff==0) the promiscuous mode.
- *  The mac_address is a 8 byte MAC address that is set in the transceiver if the
- *  promiscuous mode is disabled.
- */
-void rf212_set_promiscuous_mode(uint8_t onoff, uint8_t * mac_address);
-bool rf212_is_ready_to_send();
-int rf212_get_txpower(void);
-int rf212_read(void *buf, unsigned short bufsize);
-
-//radio_status_t radio_init(bool cal_rc_osc,
-//                          hal_rx_start_isr_event_handler_t rx_event,
-//                          hal_trx_end_isr_event_handler_t trx_end_event,
-//                          radio_rx_callback rx_callback);
-//uint8_t             radio_get_saved_rssi_value(void);
-//uint8_t             radio_get_operating_channel( void );
-//radio_status_t radio_set_operating_channel( uint8_t channel );
-//uint8_t             radio_get_tx_power_level( void );
-//radio_status_t radio_set_tx_power_level( uint8_t power_level );
-
-//uint8_t             radio_get_cca_mode( void );
-//uint8_t             radio_get_ed_threshold( void );
-//radio_status_t radio_set_cca_mode( uint8_t mode, uint8_t ed_threshold );
-//radio_status_t radio_do_cca( void );
-//radio_status_t radio_get_rssi_value( uint8_t *rssi );
-
-//uint8_t             radio_batmon_get_voltage_threshold( void );
-//uint8_t             radio_batmon_get_voltage_range( void );
-//radio_status_t radio_batmon_configure( bool range, uint8_t voltage_threshold );
-//radio_status_t radio_batmon_get_status( void );
-
-//uint8_t             radio_get_clock_speed( void );
-//radio_status_t radio_set_clock_speed( bool direct, uint8_t clock_speed );
-//radio_status_t radio_calibrate_filter( void );
-//radio_status_t radio_calibrate_pll( void );
-
-//uint8_t             radio_get_trx_state( void );
-//radio_status_t radio_set_trx_state( uint8_t new_state );
-//radio_status_t radio_enter_sleep_mode( void );
-//radio_status_t radio_leave_sleep_mode( void );
-//void           radio_reset_state_machine( void );
-//void           radio_reset_trx( void );
-
-//void           radio_use_auto_tx_crc( bool auto_crc_on );
-//radio_status_t radio_send_data( uint8_t data_length, uint8_t *data );
-
-//uint8_t             radio_get_device_role( void );
-//void           radio_set_device_role( bool i_am_coordinator );
-//uint16_t            radio_get_pan_id( void );
-//void           radio_set_pan_id( uint16_t new_pan_id );
-//uint16_t            radio_get_short_address( void );
-//void           radio_set_short_address( uint16_t new_short_address );
-//void           radio_get_extended_address( uint8_t *extended_address );
-//void           radio_set_extended_address( uint8_t *extended_address );
-//radio_status_t radio_configure_csma( uint8_t seed0, uint8_t be_csma_seed1 );
-//bool           calibrate_rc_osc_clkm(void);
-//void           calibrate_rc_osc_32k(void);
-//uint8_t * radio_frame_data(void);
-//uint8_t radio_frame_length(void);
-
-
-//#define delay_us( us )   ( _delay_loop_2( ( F_CPU / 4000000UL ) * ( us ) ) )
+uint8_t rf230_generate_random_byte(void);
+/* This function stores "length" truly random bytes in data */
+void rf230_generate_bytes(uint8_t* data, uint8_t length);
+/* This function copies the given key to the transceivers SRAM */
+void rf230_key_setup(uint8_t *key);
+/* AES ciphering function. 16 bytes in data will be ECB-encrypted and overwritten */
+uint8_t rf230_cipher(uint8_t *data);
+#endif
 
 #endif
 /** @} */
