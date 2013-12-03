@@ -799,14 +799,16 @@ hal_sram_write(uint8_t address, uint8_t length, uint8_t *data)
 void RADIO_VECT(void);
 #else  /* !DOXYGEN */
 /* These link to the RF230BB driver in rf230.c */
-void rf212_interrupt(void);
-extern hal_rx_frame_t rxframe;
+void rf230_interrupt(void);
+
+extern hal_rx_frame_t rxframe[RF230_CONF_RX_BUFFERS];
+extern uint8_t rxframe_head,rxframe_tail;
 
 /* rf230interruptflag can be printed in the main idle loop for debugging */
 #define DEBUG 0
 #if DEBUG
-volatile int rf212_interrupt_flag=0;
-#define INTERRUPTDEBUG(arg) rf212_interrupt_flag=arg
+volatile char rf230interruptflag;
+#define INTERRUPTDEBUG(arg) rf230interruptflag=arg
 #else
 #define INTERRUPTDEBUG(arg)
 #endif
@@ -972,6 +974,7 @@ HAL_RF230_ISR()
        /* Received packet interrupt */ 
        /* Buffer the frame and call rf230_interrupt to schedule poll for rf230 receive process */
 //         if (rxframe.length) break;			//toss packet if last one not processed yet
+         if (rxframe[rxframe_tail].length) INTERRUPTDEBUG(42); else INTERRUPTDEBUG(12);
  
 #ifdef RF230_MIN_RX_POWER		 
        /* Discard packets weaker than the minimum if defined. This is for testing miniature meshes.*/
@@ -982,8 +985,9 @@ HAL_RF230_ISR()
 #endif
         if (rf230_last_rssi >= RF230_MIN_RX_POWER) {       
 #endif
-         hal_frame_read(&rxframe);
-         rf212_interrupt();
+         hal_frame_read(&rxframe[rxframe_tail]);
+         rxframe_tail++;if (rxframe_tail >= RF230_CONF_RX_BUFFERS) rxframe_tail=0;
+         rf230_interrupt();
 //       trx_end_callback(isr_timestamp);
 #ifdef RF230_MIN_RX_POWER
         }

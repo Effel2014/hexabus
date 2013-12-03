@@ -711,7 +711,7 @@ PROCESS_THREAD(rf212_process, ev, data)
 	TIMETABLE(rf212_timetable);
 	TIMETABLE_AGGREGATE(aggregate_time, 10);
 #endif /* RF212_TIMETABLE_PROFILING */
-void rf212_interrupt(void)
+void rf230_interrupt(void)
 {
 #if RF212_CONF_TIMESTAMPS
 	interrupt_time = timesynch_time();
@@ -728,7 +728,8 @@ void rf212_interrupt(void)
 	return;
 }
 /* The frame is buffered to rxframe in the interrupt routine in hal.c */
-hal_rx_frame_t rxframe;
+uint8_t rxframe_head,rxframe_tail;
+hal_rx_frame_t rxframe[RF230_CONF_RX_BUFFERS];
 /*---------------------------------------------------------------------------*/
 int rf212_read(void *buf, unsigned short bufsize)
 {
@@ -743,11 +744,11 @@ int rf212_read(void *buf, unsigned short bufsize)
 	struct timestamp t;
 #endif /* RF212_CONF_TIMESTAMPS */
 
-	PRINTF("rf212_read: %u bytes lqi %u crc %u ed %u \n",rxframe.length,rxframe.lqi,rxframe.crc,rxframe.ed);
+	PRINTF("rf212_read: %u bytes lqi %u crc %u ed %u \n",rxframe[rxframe_head].length,rxframe[rxframe_head].lqi,rxframe[rxframe_head].crc,rxframe[rxframe_head].ed);
 #if DEBUG>1
-	for (len=0;len<rxframe.length;len++) PRINTF(" %x",rxframe.data[len]);PRINTF("\n");
+	for (len=0;len<rxframe[rxframe_head].length;len++) PRINTF(" %x",rxframe[rxframe_head].data[len]);PRINTF("\n");
 #endif
-	if (rxframe.length == 0)
+	if (rxframe[rxframe_head].length == 0)
 	{
 		return 0;
 	}
@@ -776,7 +777,7 @@ int rf212_read(void *buf, unsigned short bufsize)
 
 	//hal returns two extra bytes containing the checksum
 	//below works because auxlen is 2
-	len = rxframe.length;
+	len = rxframe[rxframe_head].length;
 	if (len <= AUX_LEN)
 	{
 		// flushrx();
@@ -793,10 +794,10 @@ int rf212_read(void *buf, unsigned short bufsize)
 		return 0;
 	}
 	/* Transfer the frame, stripping the checksum */
-	framep = &(rxframe.data[0]);
+	framep = &(rxframe[rxframe_head].data[0]);
 	memcpy(buf, framep, len - AUX_LEN);
 	/* Clear the length field to allow buffering of the next packet */
-	rxframe.length = 0;
+	rxframe[rxframe_head].length = 0;
 	// framep+=len-AUX_LEN+2;
 
 #if RADIOSTATS
@@ -827,7 +828,7 @@ int rf212_read(void *buf, unsigned short bufsize)
 			checksum == crc16_data(buf, len - AUX_LEN, 0))
 	{
 #else
-	if (rxframe.crc)
+	if (rxframe[rxframe_head].crc)
 	{
 #endif /* RF212_CONF_CHECKSUM */
 
@@ -850,7 +851,7 @@ int rf212_read(void *buf, unsigned short bufsize)
 		RF212_rsigsi=hal_subregister_read( SR_RSSI );
 #endif      
 		packetbuf_set_attr(PACKETBUF_ATTR_RSSI, hal_subregister_read(SR_RSSI));
-		packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, rxframe.lqi);
+		packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, rxframe[rxframe_head].lqi);
 
 		RIMESTATS_ADD(llrx);
 #if RF212_CONF_TIMESTAMPS
@@ -1221,6 +1222,10 @@ int rf212_init(void)
 
 	/* Initialize Hardware Abstraction Layer. */
 	hal_init();
+
+  /* Set receive buffers empty and point to the first */
+  for (int i=0;i<RF230_CONF_RX_BUFFERS;i++) rxframe[i].length=0;
+  rxframe_head=0;rxframe_tail=0;
 
 	/* Do full rf212 Reset */
 	/* GH: 06.04.2011 changed to recommended programming sequence see page 166
