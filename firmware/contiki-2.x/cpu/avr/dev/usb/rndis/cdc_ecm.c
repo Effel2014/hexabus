@@ -9,11 +9,7 @@
 #include "uip.h"
 #include "sicslow_ethernet.h"
 #include <stdio.h>
-#if RF230BB
 #include "rf230bb.h"
-#elif RF212BB
-#include "rf212bb.h"
-#endif
 
 #include <avr/pgmspace.h>
 #include <util/delay.h>
@@ -47,17 +43,9 @@ cdc_ecm_set_ethernet_packet_filter(void) {
 	PRINTF_P(PSTR("cdc_ecm: Received SET_ETHERNET_PACKET_FILTER: (0x%04X) "),usb_ecm_packet_filter);
 	if(usb_ecm_packet_filter & PACKET_TYPE_PROMISCUOUS) {
 		PRINTF_P(PSTR("PROMISCUOUS "));
-#if RF212BB
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
-#elif RF230BB
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
-#endif
 	} else {
-#if RF212BB
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
-#elif RF230BB
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
-#endif
 	}
 
 	if(usb_ecm_packet_filter & PACKET_TYPE_ALL_MULTICAST)
@@ -203,14 +191,7 @@ cdc_ecm_process(void) {
 		cdc_ecm_notify_connection_speed_change(250000,250000);
 		doInit = 0;
 		if(usb_ecm_packet_filter & PACKET_TYPE_PROMISCUOUS) {
-#if RF230BB
 			rf230_set_promiscuous_mode(true);
-
-#elif RF212BB
-			rf230_set_promiscuous_mode(true);
-#else		
-			radio_set_trx_state(RX_ON);
-#endif
 		}
 
 		// Select again, just to make sure.

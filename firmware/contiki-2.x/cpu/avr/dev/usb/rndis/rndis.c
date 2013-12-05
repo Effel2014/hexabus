@@ -72,11 +72,7 @@ RNDIS Status Information:
 #include "sicslow_ethernet.h"
 #include <avr/pgmspace.h>
 #include <string.h>
-#if RF230BB
 #include "rf230bb.h"
-#elif RF212BB
-#include "rf212bb.h"
-#endif
 
 #include <stdio.h>
 #include <avr/pgmspace.h>
@@ -1096,17 +1092,9 @@ uint8_t rndis_send(uint8_t * senddata, uint16_t sendlen, uint8_t led)
 void rndis_packetFilter(uint32_t newfilter)
 {
 	if (newfilter & NDIS_PACKET_TYPE_PROMISCUOUS) {
-#if RF212BB
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
-#else
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(true);
-#endif
 	} else {
-   #if RF212BB
 		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
-#else
-		USB_ETH_HOOK_SET_PROMISCIOUS_MODE(false);
-#endif
 	}
 }
 

@@ -105,22 +105,7 @@ typedef unsigned long off_t;
 /* ************************************************************************** */
 
 #ifndef USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET
-
-#if RF230BB
-#define	USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET()		rf230_is_ready_to_send()
-#elif RF212BB
-#define	USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET()		rf230_is_ready_to_send()
-#else
-static inline uint8_t radio_is_ready_to_send_() {
-	switch(radio_get_trx_state()) {
-		case BUSY_TX:
-		case BUSY_TX_ARET:
-			return 0;
-	}
-	return 1;
-}
-#define	USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET()		radio_is_ready_to_send_()
-#endif
+#define USB_ETH_HOOK_IS_READY_FOR_INBOUND_PACKET() rf230_is_ready_to_send()
 #endif
 
 #ifndef USB_ETH_HOOK_HANDLE_INBOUND_PACKET
@@ -128,12 +113,7 @@ static inline uint8_t radio_is_ready_to_send_() {
 #endif
 
 #ifndef USB_ETH_HOOK_SET_PROMISCIOUS_MODE
-
-#if RF230BB || RF212BB
-#define USB_ETH_HOOK_SET_PROMISCIOUS_MODE(value1)	rf230_set_promiscuous_mode(value1)
-#else		
-#define USB_ETH_HOOK_SET_PROMISCIOUS_MODE(value)	radio_set_trx_state(value?RX_ON:RX_AACK_ON)
-#endif
+#define USB_ETH_HOOK_SET_PROMISCIOUS_MODE(value1) rf230_set_promiscuous_mode(value1)
 #endif
 
 #ifndef USB_ETH_HOOK_INIT
@@ -144,9 +124,9 @@ static inline uint8_t radio_is_ready_to_send_() {
 //#pragma mark RF230BB Hooks
 /* ************************************************************************** */
 
-#define RF212BB_HOOK_TX_PACKET(buffer,total_len) mac_log_802_15_4_tx(buffer,total_len)
-#define RF212BB_HOOK_RX_PACKET(buffer,total_len) mac_log_802_15_4_rx(buffer,total_len)
-#define	RF212BB_HOOK_IS_SEND_ENABLED()	mac_is_send_enabled()
+#define RF230BB_HOOK_TX_PACKET(buffer,total_len) mac_log_802_15_4_tx(buffer,total_len)
+#define RF230BB_HOOK_RX_PACKET(buffer,total_len) mac_log_802_15_4_rx(buffer,total_len)
+#define RF230BB_HOOK_IS_SEND_ENABLED() mac_is_send_enabled()
 extern bool mac_is_send_enabled(void);
 
 

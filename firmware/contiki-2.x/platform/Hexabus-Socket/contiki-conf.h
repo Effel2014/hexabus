@@ -86,11 +86,11 @@ typedef unsigned long off_t;
 //#define EEPROMFS_ADDR_CODEPROP 0x8000
 
 /* Network setup. The new NETSTACK interface requires RF230BB (as does ip4) */
-#if RF230BB || RF212BB
+#if RF230BB
 #undef PACKETBUF_CONF_HDR_SIZE                  //Use the packetbuf default for header size
 #else
 #define PACKETBUF_CONF_HDR_SIZE    0            //RF230 combined driver/mac handles headers internally
-#endif /*RF230BB || RF212BB*/
+#endif /*RF230BB */
 #define RF230_CONF_RF212 1
 #define RF230_CONF_RX_BUFFERS 4
 
@@ -174,14 +174,12 @@ typedef unsigned long off_t;
 #define CHANNEL_802_15_4          0
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
-#define RF212_CONF_AUTOACK        1
 /* CCA threshold of -82dBm */
 #define RF230_CONF_CCA_THRES      -82
 /* Request 802.15.4 ACK on all packets sent (else autoretry). This is primarily for testing. */
 #define SICSLOWPAN_CONF_ACK_ALL   1
 /* Number of auto retry attempts 0-15 (0 implies don't use extended TX_ARET_ON mode with CCA) */
 #define RF230_CONF_AUTORETRIES    2
-#define RF212_CONF_AUTORETRIES    2
 #define SICSLOWPAN_CONF_FRAG      1
 /* Most browsers reissue GETs after 3 seconds which stops fragment reassembly so a longer MAXAGE does no good */
 #define SICSLOWPAN_CONF_MAXAGE    3

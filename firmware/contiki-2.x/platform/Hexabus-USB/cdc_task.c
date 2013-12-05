@@ -57,13 +57,7 @@
 #include "net/mac/frame802154.h"
 #include "rndis/rndis_task.h"
 #include "sicslow_ethernet.h"
-#if RF230BB
 #include "rf230bb.h"
-#elif RF212BB
-#include "rf212bb.h"
-#else
-#include "radio.h"
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>

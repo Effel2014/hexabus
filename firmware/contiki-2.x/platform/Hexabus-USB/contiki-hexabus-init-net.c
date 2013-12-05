@@ -33,9 +33,6 @@
  * @(#)$$
  */
 #include "contiki-hexabus.h"
-#if !RF230BB && !RF212BB
-#include "zmac.h"
-#endif
 #include "sicslowpan.h"
 #include "sicslow_ethernet.h"
 #include "rndis/rndis_task.h"
@@ -88,9 +85,6 @@ init_net(void)
 	macLongAddr = (macLongAddr & 0xffffff0000ffffffULL) | (0x000000fffe000000ULL);
 
 //N:?
-#if !RF230BB && !RF212BB
-	ieee15_4ManagerAddress.set_long_addr(macLongAddr); 
-#endif
 
 	byte_reverse((uint8_t*)&macLongAddr,8);
 	byte_reverse((uint8_t*)&usb_ethernet_addr,6);
