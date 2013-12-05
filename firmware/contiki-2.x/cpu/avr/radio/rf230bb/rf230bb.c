@@ -1421,6 +1421,9 @@ rf230_read(void *buf, unsigned short bufsize)
 #if RF230_CONF_CHECKSUM
   uint16_t checksum;
 #endif
+#if RF230_CONF_RF212
+  uint8_t crc_valid;
+#endif
 #if RF230_CONF_TIMESTAMPS
   struct timestamp t;
 #endif
@@ -1508,6 +1511,9 @@ if (!RF230_receive_on) {
   framep=&(rxframe[rxframe_head].data[0]);
   memcpy(buf,framep,len-AUX_LEN+CHECKSUM_LEN);
   rf230_last_correlation = rxframe[rxframe_head].lqi;
+#if RF230_CONF_RF212
+  crc_valid = rxframe[rxframe_head].crc;
+#endif
 
   /* Clear the length field to allow buffering of the next packet */
   rxframe[rxframe_head].length=0;
@@ -1539,7 +1545,7 @@ if (!RF230_receive_on) {
      checksum == crc16_data(buf, len - AUX_LEN, 0)) {
 #endif
 #elif RF230_CONF_RF212
-  if (rxframe[rxframe_head].crc) {
+  if (crc_valid) {
 #endif /* RF230_CONF_CHECKSUM */
 
 /* Get the received signal strength for the packet, 0-84 dB above rx threshold */

@@ -207,7 +207,7 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 /* 10 bytes per stateful address context - see sicslowpan.c */
 /* Default is 1 context with prefix aaaa::/64 */
 /* These must agree with all the other nodes or there will be a failure to communicate! */
-#//define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS 1
+#define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS 0
 #define SICSLOWPAN_CONF_ADDR_CONTEXT_0 {addr_contexts[0].prefix[0]=0xaa;addr_contexts[0].prefix[1]=0xaa;}
 #define SICSLOWPAN_CONF_ADDR_CONTEXT_1 {addr_contexts[1].prefix[0]=0xbb;addr_contexts[1].prefix[1]=0xbb;}
 #define SICSLOWPAN_CONF_ADDR_CONTEXT_2 {addr_contexts[2].prefix[0]=0x20;addr_contexts[2].prefix[1]=0x01;addr_contexts[2].prefix[2]=0x49;addr_contexts[2].prefix[3]=0x78,addr_contexts[2].prefix[4]=0x1d;addr_contexts[2].prefix[5]=0xb1;}
@@ -248,7 +248,7 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 
 /* Request 802.15.4 ACK on all packets sent by sicslowpan.c (else autoretry) */
 /* Broadcasts will be duplicated by the retry count, since no one will ACK them! */
-#define SICSLOWPAN_CONF_ACK_ALL   1
+#define SICSLOWPAN_CONF_ACK_ALL   0
 /* Number of auto retry attempts 0-15 (0 implies don't use extended TX_ARET_ON mode with CCA) */
 
 #define RF230_CONF_AUTORETRIES    2
@@ -266,7 +266,7 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 /* Allow 6loWPAN fragmentation (more efficient for large payloads over a reliable channel) */
 #define SICSLOWPAN_CONF_FRAG      1
 /* Timeout for fragment reassembly. A reissued browser GET will also cancel reassembly, typically in 2-3 seconds */
-#define SICSLOWPAN_CONF_MAXAGE    3
+#define SICSLOWPAN_CONF_MAXAGE    1
 /* Allow sneeze command from jackdaw menu */
 #define RF230_CONF_SNEEZE         1
 
