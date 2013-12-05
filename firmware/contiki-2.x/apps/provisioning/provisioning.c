@@ -157,7 +157,6 @@ PROCESS_THREAD(provisioning_process, ev, data)
 				break;
 		}
 		provisioning_pkt_pending = 0;
-		NETSTACK_FRAMER.parse();
 	} while(packetbuf_datalen() != sizeof(PROVISIONING_HEADER) || strncmp((char*)packetbuf_dataptr(), PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER)));
 	// timer expired
 	if(clock_time() - time > (unsigned long long) CLOCK_SECOND * PROV_TIMEOUT_USB) {
@@ -186,7 +185,6 @@ PROCESS_THREAD(provisioning_process, ev, data)
 		PRINTF("\n");
 		uint8_t tmp_enc = encryption_enabled;
 		encryption_enabled = 0;
-		NETSTACK_FRAMER.create();
 		NETSTACK_RDC.send(NULL,NULL);
 		packetbuf_clear();
 		encryption_enabled = tmp_enc;
@@ -241,7 +239,6 @@ int provisioning_slave(void)
 		packetbuf_set_datalen(0);
 		packetbuf_copyfrom(PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER));
 		packetbuf_set_datalen(sizeof(PROVISIONING_HEADER));
-		NETSTACK_FRAMER.create();
 		NETSTACK_RDC.send(NULL,NULL);
 		for (int i = 0; !provisioning_pkt_pending && i < 100; i++) {
 			process_run();
@@ -250,7 +247,6 @@ int provisioning_slave(void)
 		provisioning_leds();
 		//parse frame
 		if (provisioning_pkt_pending) {
-			NETSTACK_FRAMER.parse();
 			provisioning_pkt_pending = 0;
 		}
 	} while(packetbuf_datalen() != sizeof(struct provisioning_m_t) || strncmp((char*)packetbuf_dataptr(), PROVISIONING_HEADER, sizeof(PROVISIONING_HEADER)));
