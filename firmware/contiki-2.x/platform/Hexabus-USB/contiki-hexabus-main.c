@@ -91,7 +91,7 @@
 #include "dev/watchdog.h"
 #include "dev/usb/usb_drv.h"
 
-#include "radio/rf212bb/rf212bb.h"
+#include "radio/rf230bb/rf230bb.h"
 #include "net/mac/frame802154.h"
 
 #include "lib/random.h"

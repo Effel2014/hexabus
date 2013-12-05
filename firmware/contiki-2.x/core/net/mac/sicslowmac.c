@@ -52,7 +52,7 @@
 #include "net/queuebuf.h"
 #include "net/netstack.h"
 #include "lib/random.h"
-#include "radio/rf212bb/rf212bb.h"
+#include "radio/rf230bb/rf230bb.h"
 
 #define DEBUG 0
 

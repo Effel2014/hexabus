@@ -39,7 +39,7 @@
 #include <util/delay.h>
 #include "sys/clock.h"
 #include "dev/leds.h"
-#include "radio/rf212bb/rf212bb.h"
+#include "radio/rf230bb/rf230bb.h"
 #include "dev/watchdog.h"
 #include "net/netstack.h"
 #include "packetbuf.h"
