@@ -1028,7 +1028,7 @@ HAL_RF230_ISR()
 #   endif /* defined(DOXYGEN) */
 
 //GH: timer is not needed for HEXABUS platform
-#if RAVEN_REVISION != HEXABUS_SOCKET && RAVEN_REVISION != HEXABUS_USB
+#if PLATFORM_TYPE != HEXABUS_SOCKET && PLATFORM_TYPE != HEXABUS_USB
 /*----------------------------------------------------------------------------*/
 /* This #if compile switch is used to provide a "standard" function body for the */
 /* doxygen documentation. */

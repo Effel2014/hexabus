@@ -90,7 +90,7 @@
 
 #define EP_CONTROL_LENGTH     64
 
-#if RAVEN_REVISION == HEXABUS_USB
+#if PLATFORM_TYPE == HEXABUS_USB
 //USB Vendor ID for Hexabus-Project
 #define VENDOR_ID             0x24AD // embedded brains vendor ID = 0x24AD
 #define COMPOSITE_PRODUCT_ID  0x008E //Product ID for composite device

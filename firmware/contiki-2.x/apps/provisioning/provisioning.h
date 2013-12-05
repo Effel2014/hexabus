@@ -43,10 +43,10 @@ void provisioning_leds(void);
 
 extern const struct mac_driver provisioning_mac_driver;
 
-#if RAVEN_REVISION == HEXABUS_USB
+#if PLATFORM_TYPE == HEXABUS_USB
 PROCESS_NAME(provisioning_process);
 int provisioning_master(void);
-#elif RAVEN_REVISION == HEXABUS_SOCKET 
+#elif PLATFORM_TYPE == HEXABUS_SOCKET 
 int provisioning_slave(void);
 #endif
 

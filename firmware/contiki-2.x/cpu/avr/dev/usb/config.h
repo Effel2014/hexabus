@@ -63,7 +63,7 @@
 
 #include "compiler.h" //!< Compiler definitions
 
-#if RAVEN_REVISION == HEXABUS_USB
+#if PLATFORM_TYPE == HEXABUS_USB
 #include "contiki-hexabus.h"
 #else
 #include "contiki-raven.h"

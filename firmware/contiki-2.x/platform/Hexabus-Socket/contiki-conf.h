@@ -48,7 +48,7 @@
 #define PLATFORM       PLATFORM_AVR
 #define HEXABUS_SOCKET 104
 #define HEXABUS_USB    105
-#define RAVEN_REVISION HEXABUS_SOCKET
+#define PLATFORM_TYPE  HEXABUS_SOCKET
 #ifndef F_CPU
 #define F_CPU          8000000UL
 #endif

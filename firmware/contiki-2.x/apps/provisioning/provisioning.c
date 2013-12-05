@@ -107,7 +107,7 @@ void provisioning_done_leds(void)
 	}
 }
 
-#if RAVEN_REVISION == HEXABUS_USB
+#if PLATFORM_TYPE == HEXABUS_USB
 
 #include "cdc_task.h"
 /*
@@ -204,7 +204,7 @@ exit:
 }
 
 
-#elif RAVEN_REVISION == HEXABUS_SOCKET
+#elif PLATFORM_TYPE == HEXABUS_SOCKET
 #include "relay.h"
 /*
  * the slave asks the master for its PAN ID

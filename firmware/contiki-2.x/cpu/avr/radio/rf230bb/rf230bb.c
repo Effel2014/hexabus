@@ -142,7 +142,7 @@ struct timestamp {
 /* Leave radio on when USB powered or for testing low power protocols */
 /* Also, Hexabus Sockets can run with radio always on, so do that */
 /* This allows DEBUGFLOW indication of packets received when the radio is "off" */
-#if JACKDAW || RAVEN_REVISION == HEXABUS_SOCKET
+#if JACKDAW || PLATFORM_TYPE == HEXABUS_SOCKET
 #define RADIOALWAYSON 1
 #else
 #define RADIOALWAYSON 0
@@ -763,10 +763,10 @@ rf230_init(void)
 #endif
   hal_set_rst_high();
 
-#if RAVEN_REVISION == HEXABUS_USB
+#if PLATFORM_TYPE == HEXABUS_USB
 	//set CLKM rate to 8 MHz, note: CLKM is clock of AT90USB1287
 	hal_register_write(RG_TRX_CTRL_0, 0x04);
-#elif RAVEN_REVISION == HEXABUS_SOCKET
+#elif PLATFORM_TYPE == HEXABUS_SOCKET
 	//disable CLKM on HEXABUS_SOCKET
 	hal_register_write(RG_TRX_CTRL_0, 0x00);
 #endif
@@ -824,7 +824,7 @@ void rf230_warm_reset(void) {
   /* Set up number of automatic retries 0-15 (0 implies PLL_ON sends instead of the extended TX_ARET mode */
   hal_subregister_write(SR_MAX_FRAME_RETRIES, RF230_CONF_AUTORETRIES );
  
-#if RAVEN_REVISION == HEXABUS_SOCKET || RAVEN_REVISION == RAVEN_REVISION == HEXABUS_SOCKET || RAVEN_REVISION == HEXABUS_USB
+#if PLATFORM_TYPE == HEXABUS_SOCKET || PLATFORM_TYPE == HEXABUS_USB
   // set OQSPK modulation with 100KB/s (802.15.4 regulation Europe)
   hal_register_write(RG_TRX_CTRL_2, 0x08);
 

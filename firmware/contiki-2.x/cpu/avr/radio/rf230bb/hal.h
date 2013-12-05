@@ -220,7 +220,7 @@
 #   define USARTVECT  USART1_RX_vect
 //#   define TICKTIMER  3
 //#   define HAS_SPARE_TIMER // Not used
-#elif RAVEN_REVISION == HEXABUS_SOCKET
+#elif PLATFORM_TYPE == HEXABUS_SOCKET
 
 #   define SSPORT     B
 #   define SSPIN      (0x04)
@@ -235,7 +235,7 @@
 #   define SLPTRPORT  D
 #   define SLPTRPIN   (0x07)
 
-#elif RAVEN_REVISION == HEXABUS_USB
+#elif PLATFORM_TYPE == HEXABUS_USB
 
 /* HEXABUS USB AT70USB1287 */
 
@@ -455,7 +455,7 @@
 #define RADIO_VECT INT5_vect
 #define HAL_ENABLE_RADIO_INTERRUPT( ) { ( EIMSK |= ( 1 << INT5 ) ) ; EICRB |= 0x0C ; PORTE &= ~(1<<PE5);  DDRE &= ~(1<<DDE5); }
 #define HAL_DISABLE_RADIO_INTERRUPT( ) ( EIMSK &= ~( 1 << INT5 ) )
-#elif RAVEN_REVISION == HEXABUS_SOCKET || RAVEN_REVISION == HEXABUS_USB
+#elif PLATFORM_TYPE == HEXABUS_SOCKET || PLATFORM_TYPE == HEXABUS_USB
 //INT0 is used on the HEXABUS platform
 #define RADIO_VECT INT0_vect
 #define HAL_ENABLE_RADIO_INTERRUPT( ) { ( EIMSK |= ( 1 << INT0 ) ) ; EICRA |= 0x03 ; PORTD &= ~(1<<PD0);  DDRD &= ~(1<<DDD5); }
@@ -468,7 +468,7 @@
 #define HAL_DISABLE_RADIO_INTERRUPT( ) ( TIMSK1 &= ~( 1 << ICIE1 ) )
 #endif
 // Timer is not needed for the HEXABUS radio-driver
-#if RAVEN_REVISION != HEXABUS_SOCKET && RAVEN_REVISION != HEXABUS_USB
+#if PLATFORM_TYPE != HEXABUS_SOCKET && PLATFORM_TYPE != HEXABUS_USB
 #define HAL_ENABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 |= ( 1 << TOIE1 ) )
 #define HAL_DISABLE_OVERFLOW_INTERRUPT( ) ( TIMSK1 &= ~( 1 << TOIE1 ) )
 #endif
