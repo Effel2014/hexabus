@@ -239,13 +239,9 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 
-#if RF230BB
 #define NETSTACK_CONF_RADIO       rf230_driver
-#elif RF212BB
-#define NETSTACK_CONF_RADIO       rf230_driver
-#endif
 
-#define CHANNEL_802_15_4          26
+#define CHANNEL_802_15_4          0
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 
@@ -256,7 +252,6 @@ extern uint8_t mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 /* Number of auto retry attempts 0-15 (0 implies don't use extended TX_ARET_ON mode with CCA) */
 
 #define RF230_CONF_AUTORETRIES    2
-#define RF212_CONF_AUTORETRIES    2
 
 /* CCA theshold energy -91 to -61 dBm (default -77). Set this smaller than the expected minimum rssi to avoid packet collisions */
 /* The Jackdaw menu 'm' command is helpful for determining the smallest ever received rssi */
