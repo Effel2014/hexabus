@@ -41,7 +41,7 @@
 
 #if defined (__AVR_ATmega128__)
 #include "dev/rs232_atmega128.h"
-#elif defined (__AVR_ATmega1281__) || defined (__AVR_ATmega2561__)
+#elif defined (__AVR_ATmega1281__)
 #include "dev/rs232_atmega1281.h"
 #elif defined (__AVR_ATmega1284P__)
 #include "dev/rs232_atmega1284.h"
