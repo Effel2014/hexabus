@@ -344,34 +344,33 @@ frame802154_parse(uint8_t *data, int len, frame802154_t *pf)
   }
 
   if(fcf.security_enabled) {
-	  pf->aux_hdr.security_control.security_level = p[0] & 7;
-	  pf->aux_hdr.security_control.key_id_mode = (p[0] >> 3) & 3;
-	  pf->aux_hdr.security_control.reserved =	(p[0] >> 5) & 7;
-	  pf->aux_hdr.frame_counter = (uint32_t)p[1] + ((uint32_t)p[2] << 8) + ((uint32_t)p[3] << 16) + ((uint32_t)p[4]  << 24);
-	  p += 5;
-	    switch(pf->aux_hdr.security_control.key_id_mode) {
-	    case 0:
-	      c = 0;
-	      break;
-	    case 1:
-	      c = 1;
-	      break;
-	    case 2:
-	      c = 5;
-	      break;
-	    case 3:
-	      c = 9;
-	      break;
-	    default:
-	      break;
-	    }
+    pf->aux_hdr.security_control.security_level = p[0] & 7;
+    pf->aux_hdr.security_control.key_id_mode = (p[0] >> 3) & 3;
+    pf->aux_hdr.security_control.reserved =	(p[0] >> 5) & 7;
+    pf->aux_hdr.frame_counter = (uint32_t)p[1] + ((uint32_t)p[2] << 8) + ((uint32_t)p[3] << 16) + ((uint32_t)p[4]  << 24);
+    p += 5;
+    switch(pf->aux_hdr.security_control.key_id_mode) {
+      case 0:
+        c = 0;
+        break;
+      case 1:
+        c = 1;
+        break;
+      case 2:
+        c = 5;
+        break;
+      case 3:
+        c = 9;
+        break;
+      default:
+        break;
+    }
 
-	  for(tmp = 0; tmp < c; tmp++) {
-		  pf->aux_hdr.key[tmp] = p[0];
-	  	  p++;
-	  }
-
-
+    int tmp;
+    for(tmp = 0; tmp < c; tmp++) {
+      pf->aux_hdr.key[tmp] = p[0];
+      p++;
+    }
   }
 
   /* header length */
